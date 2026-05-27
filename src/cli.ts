@@ -16,11 +16,7 @@ import {
   loginByQrCode,
 } from "./netease.js";
 import { PlaylistTask } from "./types.js";
-import {
-  chooseSemanticBatchSize,
-  chooseSemanticReadConcurrency,
-  createDeepseekSemanticMatcher,
-} from "./semantic.js";
+import { createDeepseekSemanticMatcher } from "./semantic.js";
 
 type Mode = "execute" | "preview";
 
@@ -132,13 +128,6 @@ async function executeStructuredTask(
   console.log(`源歌单：${source.name}，歌曲数：${source.trackCount}`);
   const songs = await getPlaylistSongs(source.id, cookie);
   console.log(`已读取歌曲：${songs.length}`);
-  if (task.filter.type === "artist") {
-    console.log(`开始歌手筛选：${task.filter.value}，歌曲 ${songs.length} 首`);
-  } else {
-    console.log(
-      `开始语义筛选：${task.filter.type}=${task.filter.value}，歌曲 ${songs.length} 首，读取并发 ${chooseSemanticReadConcurrency(songs.length)}，DeepSeek 批大小 ${chooseSemanticBatchSize()}，DeepSeek 并发 ${config.deepseekBatchConcurrency}`,
-    );
-  }
   const progress = createTerminalProgress();
 
   const lyricFailures: Array<{
@@ -190,9 +179,6 @@ async function executeStructuredTask(
   } finally {
     progress.finish();
   }
-  console.log(
-    `筛选完成：${songs.length}/${songs.length}，已匹配：${matched.length}，总耗时：${progress.elapsed()}`,
-  );
 
   if (lyricFailures.length > 0) {
     progress.warn(`歌词读取失败：${lyricFailures.length} 首，已跳过歌词判定`);
