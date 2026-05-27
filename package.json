@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "bin": {
-    "model": "./bin/model.js"
+    "model": "./bin/model.js",
+    "preview": "./bin/preview.js",
+    "run": "./bin/run.js"
   },
   "scripts": {
     "login": "tsx src/cli.ts login",

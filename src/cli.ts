@@ -1,4 +1,6 @@
 import readline from "node:readline";
+import { createInterface } from "node:readline/promises";
+import { pathToFileURL } from "node:url";
 import { loadConfig, readCookie, setDeepseekModel } from "./config.js";
 import { parseInstruction } from "./deepseek.js";
 import { filterSongs } from "./filter.js";
@@ -229,6 +231,61 @@ function getInstruction(args: string[]): string {
   return instruction;
 }
 
+export function createInteractiveIntro(mode: Mode): string {
+  if (mode === "preview") {
+    return [
+      "┌─ Netease Playlist Assistant",
+      "│  模式：预览",
+      "│",
+      "│  请说出你的歌单整理需求",
+      "│  建议写清楚：源歌单、筛选条件、新歌单名称",
+      "│",
+      "│  示例：",
+      "│  帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx",
+      "└─",
+    ].join("\n");
+  }
+
+  return [
+    "┌─ Netease Playlist Assistant",
+    "│  模式：建立歌单",
+    "│",
+    "│  请说出你的歌单整理需求",
+    "│  建议输入刚才预览过的同一条需求",
+    "│  工具会优先复用匹配的最近预览结果",
+    "│",
+    "│  示例：",
+    "│  帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx",
+    "└─",
+  ].join("\n");
+}
+
+export function validateInteractiveArgs(command: string, args: string[]): void {
+  if (args.length > 0) {
+    throw new Error(
+      `${command} 已进入对话输入模式，请启动后在对话框内输入需求`,
+    );
+  }
+}
+
+async function promptInstruction(mode: Mode): Promise<string> {
+  console.log(createInteractiveIntro(mode));
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  try {
+    const instruction = (await rl.question("需求 > ")).trim();
+    if (!instruction) {
+      throw new Error("需求不能为空");
+    }
+    return instruction;
+  } finally {
+    rl.close();
+  }
+}
+
 function getModelName(args: string[]): string {
   const model = args
     .filter((arg) => arg !== "--")
@@ -249,12 +306,14 @@ async function main(): Promise<void> {
   }
 
   if (command === "run") {
-    await runTask(getInstruction(args), "execute");
+    validateInteractiveArgs("run", args);
+    await runTask(await promptInstruction("execute"), "execute");
     return;
   }
 
   if (command === "preview") {
-    await runTask(getInstruction(args), "preview");
+    validateInteractiveArgs("preview", args);
+    await runTask(await promptInstruction("preview"), "preview");
     return;
   }
 
@@ -269,12 +328,17 @@ async function main(): Promise<void> {
   npm run login
   model -- deepseek-v4-flash
   model -- deepseek-v4-pro
-  npm run preview -- "把歌单A里贾斯汀比伯的歌添加进新建歌单JB"
-  npm run run -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"`);
+  preview
+  run`);
 }
 
-main().catch((error: unknown) => {
-  const message = getErrorMessage(error);
-  console.error(`执行失败：${message}`);
-  process.exitCode = 1;
-});
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  main().catch((error: unknown) => {
+    const message = getErrorMessage(error);
+    console.error(`执行失败：${message}`);
+    process.exitCode = 1;
+  });
+}

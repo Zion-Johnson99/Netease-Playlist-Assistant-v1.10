@@ -14,7 +14,7 @@ const result = spawnSync(
   [
     tsxCli,
     path.join(rootDir, "src", "cli.ts"),
-    "model",
+    "preview",
     ...process.argv.slice(2),
   ],
   {

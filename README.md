@@ -22,11 +22,12 @@
 ## 工作流示例
 
 ```powershell
-npm run preview -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run run -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
+npm link
+preview
+run
 ```
 
-`preview` 会输出命中歌曲、匹配理由和处理进度。确认结果后执行同一条 `run` 指令，工具会优先复用最近一次预览结果创建新歌单。
+`preview` 会进入预览对话框，输入完整需求后输出命中歌曲、匹配理由和处理进度。确认结果后执行 `run`，在对话框里输入同一条需求，工具会优先复用最近一次预览结果创建新歌单。
 
 ## 环境要求
 
@@ -78,19 +79,22 @@ npm run login
 预览匹配结果：
 
 ```powershell
-npm run preview -- "把歌单A里贾斯汀比伯的歌添加进新建歌单JB"
-npm run preview -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run preview -- "把歌单A里所有 R&B 歌曲添加进新建歌单R&B"
-npm run preview -- "把歌单A里适合夜晚听的英文慢歌添加进新建歌单夜晚英文"
+preview
+```
+
+启动后在对话框里输入完整需求，例如：
+
+```text
+帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx
 ```
 
 确认后创建新歌单：
 
 ```powershell
-npm run run -- "把歌单A里贾斯汀比伯的歌添加进新建歌单JB"
-npm run run -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run run -- "把歌单A里所有嘻哈歌曲添加进新建歌单Hip-Hop"
+run
 ```
+
+启动后输入同一条完整需求。
 
 切换 DeepSeek 模型：
 
@@ -100,7 +104,7 @@ model -- deepseek-v4-flash
 model -- deepseek-v4-pro
 ```
 
-`npm link` 只需在项目根目录执行一次。随后可在任意 PowerShell 窗口使用 `model -- deepseek-v4-flash` 或 `model -- deepseek-v4-pro` 更新 `.env` 里的 `DEEPSEEK_MODEL`。
+`npm link` 只需在项目根目录执行一次。随后可在任意 PowerShell 窗口使用 `preview`、`run`、`model -- deepseek-v4-flash` 或 `model -- deepseek-v4-pro`。
 
 ## 筛选机制
 
@@ -161,11 +165,12 @@ This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.
 ## Example Workflow
 
 ```powershell
-npm run preview -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run run -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
+npm link
+preview
+run
 ```
 
-`preview` prints matched tracks, reasons, and progress. After checking the result, run the same instruction with `run`; the tool will reuse the latest matching preview result when available.
+`preview` opens an interactive prompt for the full request, then prints matched tracks, reasons, and progress. After checking the result, run `run` and enter the same request; the tool will reuse the latest matching preview result when available.
 
 ## Requirements
 
@@ -217,18 +222,19 @@ The command prints a QR code in the terminal. Scan it with the NetEase Cloud Mus
 Preview matching results:
 
 ```powershell
-npm run preview -- "把歌单A里贾斯汀比伯的歌添加进新建歌单JB"
-npm run preview -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run preview -- "把歌单A里所有 R&B 歌曲添加进新建歌单R&B"
-npm run preview -- "把歌单A里适合夜晚听的英文慢歌添加进新建歌单夜晚英文"
+preview
+```
+
+Enter the full request in the prompt, for example:
+
+```text
+把歌单A里全部粤语歌添加进新建歌单粤语精选
 ```
 
 Create a playlist after preview:
 
 ```powershell
-npm run run -- "把歌单A里贾斯汀比伯的歌添加进新建歌单JB"
-npm run run -- "把歌单A里全部粤语歌添加进新建歌单粤语精选"
-npm run run -- "把歌单A里所有嘻哈歌曲添加进新建歌单Hip-Hop"
+run
 ```
 
 Switch DeepSeek models:
