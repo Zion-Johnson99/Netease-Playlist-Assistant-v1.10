@@ -4,11 +4,11 @@
 
 ## 中文
 
-用自然语言整理网易云音乐歌单的本地 CLI 工具。
+用自然语言整理网易云音乐歌单的本地 CLI 工具 🎧
 
-有没有遇到过这种情况：一个大歌单里混着粤语歌、日语歌、夜晚慢歌、健身歌，想单独拎出一类做成新歌单，结果只能一首一首翻、一首一首点。像“把这个歌单里的粤语歌提出来放进新歌单”“把适合通勤的英文歌单独整理出来”这类事，手动处理很耗时间，也很容易漏歌。
+歌单一大，整理就很麻烦：粤语歌、日语歌、夜晚慢歌、健身歌全混在一起，临时想单独拎出一类，经常要翻半天、点半天，还容易漏掉几首。比如想把某个歌单里的粤语歌单独放进新歌单，或者把适合通勤的英文歌整理出来，手动处理很快就变成重复劳动。
 
-这个工具就是为这种整理场景准备的。你只要用自然语言说清楚源歌单、筛选条件和目标歌单，它会先帮你预览结果，再把命中的歌曲整理进新歌单。
+这个工具专门处理这类歌单整理任务。你只要用自然语言说清楚源歌单、筛选条件和目标歌单，它会先给出预览结果，确认之后再把命中的歌曲整理进新歌单 ✅
 
 这个项目基于 [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi) 的接口能力构建，在它提供的网易云音乐登录、歌单、歌曲、歌词、音乐百科等接口基础上，封装出一个面向个人歌单整理的命令行工作流。
 
@@ -113,11 +113,27 @@ model -- deepseek-v4-pro
 preview
 ```
 
+![preview 模式](docs/images/02-preview-mode.png)
+
 启动后在对话框里输入完整需求，例如：
 
 ```text
 帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx
 ```
+
+常见筛选方式：
+
+按歌手或歌曲名筛选：
+
+![按名字筛选歌曲](docs/images/03-filter-by-artist.png)
+
+按曲风筛选：
+
+![按曲风筛选歌曲](docs/images/04-filter-by-genre.png)
+
+按歌曲信息描述筛选：
+
+![按歌曲信息描述筛选](docs/images/05-filter-by-description.png)
 
 确认后创建新歌单：
 
@@ -125,7 +141,15 @@ preview
 run
 ```
 
+![run 模式](docs/images/06-run-mode.png)
+
 启动后输入同一条完整需求。
+
+运行完成后，可以在网易云音乐里查看创建结果：
+
+![结果展示 1](docs/images/07-result-01.png)
+
+![结果展示 2](docs/images/07-result-02.png)
 
 ## 筛选机制
 
@@ -168,11 +192,11 @@ MIT License
 
 ## English
 
-A local CLI tool for organizing NetEase Cloud Music playlists with natural language.
+A local CLI tool for organizing NetEase Cloud Music playlists with natural language 🎧
 
-Ever had a big playlist packed with Cantonese tracks, late-night songs, workout songs, and random favorites, then realized pulling one category into a clean new playlist would take far too many clicks? Tasks like “extract all Cantonese songs from this playlist” or “separate the English commute tracks into a new playlist” are simple in theory and tedious in practice.
+Large playlists get messy fast: Cantonese tracks, Japanese songs, late-night slow songs, workout music, and old favorites all end up in the same place. When you suddenly want to pull out one category, it often means scrolling for ages, clicking track by track, and still missing a few. Tasks like moving all Cantonese songs into a new playlist or collecting English songs for commuting quickly turn into repetitive work.
 
-This tool is built for that workflow. Describe the source playlist, the filter, and the target playlist in natural language, review the matched result first, then create the new playlist from the confirmed selection.
+This tool is made for that kind of playlist cleanup. Describe the source playlist, the filter, and the target playlist in natural language, preview the matches first, then confirm and move the matched songs into a new playlist ✅
 
 This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi). It uses the API capabilities provided by that project, including login, playlists, tracks, lyrics, and song metadata, then wraps them into a personal playlist management workflow.
 
@@ -277,17 +301,41 @@ Preview matching results:
 preview
 ```
 
+![preview mode](docs/images/02-preview-mode.png)
+
 Enter the full request in the prompt, for example:
 
 ```text
 把歌单A里全部粤语歌添加进新建歌单粤语精选
 ```
 
+Common filtering examples:
+
+Filter by artist or song name:
+
+![filter by name](docs/images/03-filter-by-artist.png)
+
+Filter by genre:
+
+![filter by genre](docs/images/04-filter-by-genre.png)
+
+Filter by song description:
+
+![filter by song description](docs/images/05-filter-by-description.png)
+
 Create a playlist after preview:
 
 ```bash
 run
 ```
+
+![run mode](docs/images/06-run-mode.png)
+
+After completion, check the created playlist in NetEase Cloud Music:
+
+![result 1](docs/images/07-result-01.png)
+
+![result 2](docs/images/07-result-02.png)
 
 ## How It Works
 
