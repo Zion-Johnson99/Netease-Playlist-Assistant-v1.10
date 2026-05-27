@@ -1,3 +1,4 @@
+import readline from "node:readline";
 import { loadConfig, readCookie, setDeepseekModel } from "./config.js";
 import { parseInstruction } from "./deepseek.js";
 import { filterSongs } from "./filter.js";
@@ -15,12 +16,68 @@ import {
   loginByQrCode,
 } from "./netease.js";
 import { PlaylistTask } from "./types.js";
-import { createDeepseekSemanticMatcher } from "./semantic.js";
+import {
+  chooseSemanticBatchSize,
+  chooseSemanticReadConcurrency,
+  createDeepseekSemanticMatcher,
+} from "./semantic.js";
 
 type Mode = "execute" | "preview";
 
+type TerminalProgress = {
+  update: (message: string) => void;
+  finish: () => void;
+  elapsed: () => string;
+  warn: (message: string) => void;
+};
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function createTerminalProgress(): TerminalProgress {
+  let active = false;
+  const startedAt = Date.now();
+
+  const elapsed = (): string => {
+    const totalSeconds = Math.floor((Date.now() - startedAt) / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const finish = (): void => {
+    if (!active) {
+      return;
+    }
+
+    process.stdout.write("\n");
+    active = false;
+  };
+
+  const render = (message: string): void => {
+    const singleLine = `${message}，耗时 ${elapsed()}`.replace(/\r?\n/g, " ");
+    if (!process.stdout.isTTY) {
+      console.log(singleLine);
+      active = false;
+      return;
+    }
+
+    readline.clearLine(process.stdout, 0);
+    readline.cursorTo(process.stdout, 0);
+    process.stdout.write(singleLine);
+    active = true;
+  };
+
+  return {
+    update: render,
+    finish,
+    elapsed,
+    warn: (message: string): void => {
+      finish();
+      console.warn(message);
+    },
+  };
 }
 
 async function runTask(instruction: string, mode: Mode): Promise<void> {
@@ -75,56 +132,72 @@ async function executeStructuredTask(
   console.log(`源歌单：${source.name}，歌曲数：${source.trackCount}`);
   const songs = await getPlaylistSongs(source.id, cookie);
   console.log(`已读取歌曲：${songs.length}`);
+  if (task.filter.type === "artist") {
+    console.log(`开始歌手筛选：${task.filter.value}，歌曲 ${songs.length} 首`);
+  } else {
+    console.log(
+      `开始语义筛选：${task.filter.type}=${task.filter.value}，歌曲 ${songs.length} 首，读取并发 ${chooseSemanticReadConcurrency(songs.length)}，DeepSeek 批大小 ${chooseSemanticBatchSize()}，DeepSeek 并发 ${config.deepseekBatchConcurrency}`,
+    );
+  }
+  const progress = createTerminalProgress();
 
   const lyricFailures: Array<{
     songId: number;
     display: string;
     message: string;
   }> = [];
-  const matched = await filterSongs(
-    songs,
-    task,
-    (songId) => getLyric(songId, cookie),
-    {
-      onProgress:
-        task.filter.type !== "artist"
-          ? (event) => {
-              if (event.message) {
-                console.log(event.message);
-                return;
-              }
+  let matched: Awaited<ReturnType<typeof filterSongs>>;
+  try {
+    matched = await filterSongs(
+      songs,
+      task,
+      (songId) => getLyric(songId, cookie),
+      {
+        onProgress:
+          task.filter.type !== "artist"
+            ? (event) => {
+                if (event.message) {
+                  progress.update(event.message);
+                  return;
+                }
 
-              const phaseLabel =
-                event.phase === "lyrics"
-                  ? "读取歌词"
-                  : event.phase === "metadata"
-                    ? "读取元数据"
-                    : event.phase === "semantic"
-                      ? "语义判定"
-                      : "筛选";
-              console.log(
-                `${phaseLabel}进度：${event.processed}/${event.total}，已匹配：${event.matched}`,
-              );
-            }
-          : undefined,
-      semanticMatcher: createDeepseekSemanticMatcher(config, {
-        getSongWikiSummary: (songId) => getSongWikiSummary(songId, cookie),
-      }),
-      onLyricError: ({ song, error }) => {
-        lyricFailures.push({
-          songId: song.id,
-          display: getSongDisplay(song),
-          message: getErrorMessage(error),
-        });
+                const phaseLabel =
+                  event.phase === "lyrics"
+                    ? "读取歌词"
+                    : event.phase === "metadata"
+                      ? "读取元数据"
+                      : event.phase === "semantic"
+                        ? "语义判定"
+                        : "筛选";
+                progress.update(
+                  `${phaseLabel}进度：${event.processed}/${event.total}，已匹配：${event.matched}`,
+                );
+              }
+            : undefined,
+        semanticMatcher: createDeepseekSemanticMatcher(config, {
+          getSongWikiSummary: (songId) => getSongWikiSummary(songId, cookie),
+        }),
+        onLyricError: ({ song, error }) => {
+          lyricFailures.push({
+            songId: song.id,
+            display: getSongDisplay(song),
+            message: getErrorMessage(error),
+          });
+        },
+        progressInterval: 25,
       },
-      progressInterval: 25,
-    },
+    );
+  } finally {
+    progress.finish();
+  }
+  console.log(
+    `筛选完成：${songs.length}/${songs.length}，已匹配：${matched.length}，总耗时：${progress.elapsed()}`,
   );
 
   if (lyricFailures.length > 0) {
-    console.warn(`歌词读取失败：${lyricFailures.length} 首，已跳过歌词判定`);
+    progress.warn(`歌词读取失败：${lyricFailures.length} 首，已跳过歌词判定`);
     for (const failure of lyricFailures) {
-      console.warn(
+      progress.warn(
         `- ${failure.display} (${failure.songId}) | ${failure.message}`,
       );
     }

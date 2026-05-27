@@ -6,7 +6,7 @@ import { SemanticMatcherInput } from "./filter.js";
 import { createSemanticDecisionKey, SemanticCache } from "./semantic-cache.js";
 import { MatchedSong, Song } from "./types.js";
 
-const defaultBatchSize = 30;
+const defaultBatchSize = 40;
 const defaultConfidenceThreshold = 0.75;
 const lyricSnippetLimit = 900;
 const metadataTextLimit = 5000;
@@ -62,6 +62,20 @@ export function chooseSemanticReadConcurrency(songCount: number): number {
   }
 
   return 8;
+}
+
+export function chooseSemanticBatchSize(): number {
+  const raw = process.env.DEEPSEEK_BATCH_SIZE;
+  if (!raw) {
+    return defaultBatchSize;
+  }
+
+  const value = Number.parseInt(raw, 10);
+  if (!Number.isFinite(value) || value <= 0) {
+    return defaultBatchSize;
+  }
+
+  return value;
 }
 
 async function mapWithConcurrency<T, R>(
@@ -120,12 +134,12 @@ function trimText(text: string, limit: number): string {
 }
 
 function createProgressBar(processed: number, total: number): string {
-  const width = 20;
+  const width = 24;
   const safeTotal = Math.max(total, 1);
   const safeProcessed = Math.min(Math.max(processed, 0), safeTotal);
   const filled = Math.round((safeProcessed / safeTotal) * width);
   const percent = Math.round((safeProcessed / safeTotal) * 100);
-  return `[${"#".repeat(filled)}${"-".repeat(width - filled)}] ${percent}%`;
+  return `[${"█".repeat(filled)}${"░".repeat(width - filled)}] ${percent}%`;
 }
 
 function collectText(value: unknown, output: string[], prefix = ""): void {
@@ -287,7 +301,7 @@ async function createLanguageContexts(
     phase: "lyrics",
     total: songs.length,
     force: true,
-    message: `读取歌词进度：${createProgressBar(0, songs.length)} 0/${songs.length}`,
+    message: `读取歌词：${createProgressBar(0, songs.length)} 0/${songs.length}`,
   });
 
   return mapWithConcurrency(songs, concurrency, async (song) => {
@@ -300,7 +314,7 @@ async function createLanguageContexts(
         phase: "lyrics",
         total: songs.length,
         force: true,
-        message: `读取歌词进度：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
+        message: `读取歌词：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
       });
     }
 
@@ -323,7 +337,7 @@ async function createMetadataContexts(
     phase: "metadata",
     total: songs.length,
     force: true,
-    message: `读取元数据进度：${createProgressBar(0, songs.length)} 0/${songs.length}`,
+    message: `读取元数据：${createProgressBar(0, songs.length)} 0/${songs.length}`,
   });
 
   return mapWithConcurrency(songs, concurrency, async (song) => {
@@ -335,7 +349,7 @@ async function createMetadataContexts(
         phase: "metadata",
         total: songs.length,
         force: true,
-        message: `读取元数据进度：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
+        message: `读取元数据：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
       });
     }
 
@@ -391,18 +405,20 @@ async function classifyContexts(
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定准备：${createProgressBar(0, missingContexts.length)} ${missingContexts.length} 首，${batches.length} 批，并发 ${batchConcurrency}`,
+      message: `DeepSeek 判定：${createProgressBar(0, missingContexts.length)} 已完成 0/${missingContexts.length}，批次 0/${batches.length}，运行中 0，失败批次 0，并发 ${batchConcurrency}`,
     });
   }
 
   let completedSongCount = 0;
   let failedBatchCount = 0;
+  let runningBatchCount = 0;
   await mapWithConcurrency(batches, batchConcurrency, async (batch) => {
+    runningBatchCount += 1;
     input.onProgress(completedSongCount, 0, {
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定：第 ${batch.index + 1}/${batches.length} 批开始，歌曲 ${batch.contexts.length} 首`,
+      message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
     });
 
     const batchDecisions = await classifyBatchWithRetry(
@@ -417,11 +433,12 @@ async function classifyContexts(
     if (!batchDecisions) {
       failedBatchCount += 1;
       completedSongCount += batch.contexts.length;
+      runningBatchCount -= 1;
       input.onProgress(completedSongCount, 0, {
         phase: "semantic",
         total: missingContexts.length,
         force: true,
-        message: `DeepSeek 判定：第 ${batch.index + 1}/${batches.length} 批失败并跳过，已判定 ${completedSongCount}/${missingContexts.length}，失败批次 ${failedBatchCount}`,
+        message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
       });
       return;
     }
@@ -449,11 +466,12 @@ async function classifyContexts(
     }
     cache.save();
     completedSongCount += batch.contexts.length;
+    runningBatchCount -= 1;
     input.onProgress(completedSongCount, 0, {
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，失败批次 ${failedBatchCount}`,
+      message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
     });
   });
 
@@ -566,7 +584,7 @@ export function createDeepseekSemanticMatcher(
       );
     }
 
-    const batchSize = options.batchSize ?? defaultBatchSize;
+    const batchSize = options.batchSize ?? chooseSemanticBatchSize();
     const concurrency =
       options.concurrency ?? chooseSemanticReadConcurrency(input.songs.length);
     const batchConcurrency =
