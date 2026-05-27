@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
+    "login": "./bin/login.js",
     "model": "./bin/model.js",
     "preview": "./bin/preview.js",
     "run": "./bin/run.js"

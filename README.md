@@ -23,23 +23,13 @@
 - 缓存复用：保存语义判断和最近一次预览结果，减少重复请求。
 - 接口调度：对网易云接口调用做限速、排队和重试，降低频繁操作带来的失败率。
 
-## 工作流示例
-
-```bash
-npm link
-preview
-run
-```
-
-`preview` 会进入预览对话框，输入完整需求后输出命中歌曲、匹配理由和处理进度。确认结果后执行 `run`，在对话框里输入同一条需求，工具会优先复用最近一次预览结果创建新歌单。
-
 ## 环境要求
 
 - Node.js 18+
 - npm
 - macOS、Linux 或 Windows 终端
 - 网易云音乐账号
-- DeepSeek API Key，默认使用 `deepseek-v4-flash`，也支持其他 DeepSeek API 模型
+- 兼容 OpenAI Chat Completions 的模型 API Key；默认示例使用 DeepSeek 的 `deepseek-v4-flash`
 
 ## 快速开始
 
@@ -49,19 +39,31 @@ cd netease-playlist-assistant
 npm install
 ```
 
-复制环境变量示例：
+复制环境变量示例并打开配置文件。
+
+Windows PowerShell：
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+macOS / Linux：
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-编辑 `.env`：
+填入你的模型服务配置：
 
 ```env
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
+
+`DEEPSEEK_API_KEY` 是模型服务的 API Key。`DEEPSEEK_MODEL` 是实际调用的模型名。`DEEPSEEK_BASE_URL` 是模型服务地址，默认示例指向 DeepSeek；接入其他兼容 OpenAI Chat Completions 的服务时，按对应服务的地址和模型名填写。
 
 DeepSeek API 文档：
 
@@ -76,15 +78,34 @@ DEEPSEEK_BATCH_TIMEOUT_MS=60000
 DEEPSEEK_BATCH_RETRIES=1
 ```
 
-## 登录网易云
+`DEEPSEEK_BATCH_CONCURRENCY` 控制语义判断的并发批次数。`DEEPSEEK_BATCH_TIMEOUT_MS` 控制单批请求超时时间。`DEEPSEEK_BATCH_RETRIES` 控制失败后的重试次数。默认值适合普通个人歌单，歌单很大或网络波动明显时再调整。
+
+注册本地命令：
 
 ```bash
-npm run login
+npm link
+```
+
+`npm link` 会把本项目的 `login`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
+
+## 使用方式
+
+登录网易云：
+
+```bash
+login
 ```
 
 命令会在终端显示二维码。使用网易云音乐手机 App 扫码确认后，登录状态会写入 `.netease-assistant/cookie.txt`。
 
-## 使用方式
+可选：切换内置 DeepSeek 模型：
+
+```bash
+model -- deepseek-v4-flash
+model -- deepseek-v4-pro
+```
+
+默认模型是 `deepseek-v4-flash`。`model` 命令用于切换项目内置的 DeepSeek 示例模型；接入其他兼容模型时，修改 `.env` 里的 `DEEPSEEK_MODEL` 和 `DEEPSEEK_BASE_URL`。
 
 预览匹配结果：
 
@@ -105,20 +126,6 @@ run
 ```
 
 启动后输入同一条完整需求。
-
-切换 DeepSeek 模型：
-
-```bash
-npm link
-model -- deepseek-v4-flash
-model -- deepseek-v4-pro
-```
-
-`npm link` 只需在项目根目录执行一次。随后可在 Windows 的 PowerShell 或 mac 的对应终端里使用 `preview`、`run`、`model -- deepseek-v4-flash` 或 `model -- deepseek-v4-pro`。
-
-当前命令入口和路径处理方式适合常规终端环境。常见前提是本机已安装 Node.js 18+，并且 npm 的全局 bin 目录已经加入 `PATH`，这样 `preview`、`run`、`model` 这些命令才能直接调用。
-
-默认模型是 `deepseek-v4-flash`。如果你已经有其他 DeepSeek API 模型可用，也可以通过 `model` 命令切换。
 
 ## 筛选机制
 
@@ -180,23 +187,13 @@ This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.
 - Local cache: reuses semantic decisions and the latest preview result.
 - API scheduling: queues, rate-limits, and retries selected NetEase API calls.
 
-## Example Workflow
-
-```bash
-npm link
-preview
-run
-```
-
-`preview` opens an interactive prompt for the full request, then prints matched tracks, reasons, and progress. After checking the result, run `run` and enter the same request; the tool will reuse the latest matching preview result when available.
-
 ## Requirements
 
 - Node.js 18+
 - npm
 - macOS, Linux, or Windows terminal
 - NetEase Cloud Music account
-- DeepSeek API Key, defaulting to `deepseek-v4-flash` with support for other DeepSeek API models
+- An API key for an OpenAI Chat Completions-compatible model service; examples default to DeepSeek `deepseek-v4-flash`
 
 ## Quick Start
 
@@ -206,19 +203,31 @@ cd netease-playlist-assistant
 npm install
 ```
 
-Copy the environment example:
+Copy the environment example and open it.
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+macOS / Linux:
 
 ```bash
 cp .env.example .env
+nano .env
 ```
 
-Edit `.env`:
+Fill in your model service settings:
 
 ```env
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
 DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
+
+`DEEPSEEK_API_KEY` is the model service API key. `DEEPSEEK_MODEL` is the model name sent to the API. `DEEPSEEK_BASE_URL` is the model service endpoint; the default example points to DeepSeek, and other OpenAI Chat Completions-compatible services can use their own endpoint and model name.
 
 DeepSeek API references:
 
@@ -233,15 +242,34 @@ DEEPSEEK_BATCH_TIMEOUT_MS=60000
 DEEPSEEK_BATCH_RETRIES=1
 ```
 
-## Login
+`DEEPSEEK_BATCH_CONCURRENCY` controls semantic matching batch concurrency. `DEEPSEEK_BATCH_TIMEOUT_MS` controls the timeout for each batch request. `DEEPSEEK_BATCH_RETRIES` controls retry attempts after a failed request. The defaults fit common personal playlists; tune them for very large playlists or unstable networks.
+
+Register local commands:
 
 ```bash
-npm run login
+npm link
+```
+
+`npm link` registers this project's `login`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
+
+## Usage
+
+Log in to NetEase Cloud Music:
+
+```bash
+login
 ```
 
 The command prints a QR code in the terminal. Scan it with the NetEase Cloud Music mobile app. The login cookie is stored at `.netease-assistant/cookie.txt`.
 
-## Usage
+Optional: switch built-in DeepSeek models:
+
+```bash
+model -- deepseek-v4-flash
+model -- deepseek-v4-pro
+```
+
+The default model is `deepseek-v4-flash`. The `model` command switches between the built-in DeepSeek example models; for another compatible model service, update `DEEPSEEK_MODEL` and `DEEPSEEK_BASE_URL` in `.env`.
 
 Preview matching results:
 
@@ -260,20 +288,6 @@ Create a playlist after preview:
 ```bash
 run
 ```
-
-Switch DeepSeek models:
-
-```bash
-npm link
-model -- deepseek-v4-flash
-model -- deepseek-v4-pro
-```
-
-Run `npm link` once in the project root. After that, `preview`, `run`, `model -- deepseek-v4-flash`, and `model -- deepseek-v4-pro` are available in Windows PowerShell or the corresponding terminal on macOS.
-
-The current command entrypoints and path handling fit a standard terminal setup. The main prerequisite is Node.js 18+ with npm's global bin directory available in `PATH`, so the linked commands can be launched directly.
-
-The default model is `deepseek-v4-flash`. If you have access to another DeepSeek API model, you can switch to it with the `model` command.
 
 ## How It Works
 
