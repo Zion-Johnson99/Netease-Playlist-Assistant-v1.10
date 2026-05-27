@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.netease-assistant/
+previous_plan.md

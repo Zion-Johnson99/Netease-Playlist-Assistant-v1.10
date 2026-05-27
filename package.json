@@ -1,0 +1,34 @@
+{
+  "name": "netease-playlist-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "model": "./bin/model.js"
+  },
+  "scripts": {
+    "login": "tsx src/cli.ts login",
+    "model": "tsx src/cli.ts model",
+    "run": "tsx src/cli.ts run",
+    "preview": "tsx src/cli.ts preview",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "npm run typecheck && npm run format:check && npm test"
+  },
+  "dependencies": {
+    "NeteaseCloudMusicApi": "^4.32.0",
+    "dotenv": "^17.2.3",
+    "openai": "^6.9.1",
+    "qrcode-terminal": "^0.12.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/qrcode-terminal": "^0.12.2",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
