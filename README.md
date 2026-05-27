@@ -6,11 +6,15 @@
 
 用自然语言整理网易云音乐歌单的本地 CLI 工具。
 
+有没有遇到过这种情况：一个大歌单里混着粤语歌、日语歌、夜晚慢歌、健身歌，想单独拎出一类做成新歌单，结果只能一首一首翻、一首一首点。像“把这个歌单里的粤语歌提出来放进新歌单”“把适合通勤的英文歌单独整理出来”这类事，手动处理很耗时间，也很容易漏歌。
+
+这个工具就是为这种整理场景准备的。你只要用自然语言说清楚源歌单、筛选条件和目标歌单，它会先帮你预览结果，再把命中的歌曲整理进新歌单。
+
 这个项目基于 [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi) 的接口能力构建，在它提供的网易云音乐登录、歌单、歌曲、歌词、音乐百科等接口基础上，封装出一个面向个人歌单整理的命令行工作流。
 
 ## 功能特性
 
-- 自然语言指令：直接描述“从哪个歌单筛选什么歌曲，并创建成哪个新歌单”。
+- 自然语言指令：直接描述“从哪个歌单筛选什么歌曲，并创建成哪个新歌单”，也支持“我喜欢的音乐”这类默认歌单。
 - 二维码登录：通过网易云音乐手机 App 扫码登录，登录状态保存在本地。
 - 预览优先：先用 `preview` 查看命中歌曲和理由，再用 `run` 创建新歌单。
 - 歌手筛选：本地匹配歌手名与别名，适合“周杰伦的歌”“Justin Bieber 的歌”这类任务。
@@ -21,7 +25,7 @@
 
 ## 工作流示例
 
-```powershell
+```bash
 npm link
 preview
 run
@@ -33,12 +37,13 @@ run
 
 - Node.js 18+
 - npm
+- macOS、Linux 或 Windows 终端
 - 网易云音乐账号
-- DeepSeek API Key
+- DeepSeek API Key，默认使用 `deepseek-v4-flash`，也支持其他 DeepSeek API 模型
 
 ## 快速开始
 
-```powershell
+```bash
 git clone https://github.com/<your-name>/netease-playlist-assistant.git
 cd netease-playlist-assistant
 npm install
@@ -46,17 +51,22 @@ npm install
 
 复制环境变量示例：
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
 编辑 `.env`：
 
 ```env
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
+
+DeepSeek API 文档：
+
+- [DeepSeek API Docs](https://api-docs.deepseek.com/zh-cn/)
+- [DeepSeek Platform Docs](https://platform.deepseek.com/docs)
 
 可选配置：
 
@@ -68,7 +78,7 @@ DEEPSEEK_BATCH_RETRIES=1
 
 ## 登录网易云
 
-```powershell
+```bash
 npm run login
 ```
 
@@ -78,7 +88,7 @@ npm run login
 
 预览匹配结果：
 
-```powershell
+```bash
 preview
 ```
 
@@ -90,7 +100,7 @@ preview
 
 确认后创建新歌单：
 
-```powershell
+```bash
 run
 ```
 
@@ -98,13 +108,17 @@ run
 
 切换 DeepSeek 模型：
 
-```powershell
+```bash
 npm link
 model -- deepseek-v4-flash
 model -- deepseek-v4-pro
 ```
 
-`npm link` 只需在项目根目录执行一次。随后可在任意 PowerShell 窗口使用 `preview`、`run`、`model -- deepseek-v4-flash` 或 `model -- deepseek-v4-pro`。
+`npm link` 只需在项目根目录执行一次。随后可在 Windows 的 PowerShell 或 mac 的对应终端里使用 `preview`、`run`、`model -- deepseek-v4-flash` 或 `model -- deepseek-v4-pro`。
+
+当前命令入口和路径处理方式适合常规终端环境。常见前提是本机已安装 Node.js 18+，并且 npm 的全局 bin 目录已经加入 `PATH`，这样 `preview`、`run`、`model` 这些命令才能直接调用。
+
+默认模型是 `deepseek-v4-flash`。如果你已经有其他 DeepSeek API 模型可用，也可以通过 `model` 命令切换。
 
 ## 筛选机制
 
@@ -125,7 +139,7 @@ model -- deepseek-v4-pro
 
 ## 开发
 
-```powershell
+```bash
 npm run typecheck
 npm run format:check
 npm test
@@ -149,11 +163,15 @@ MIT License
 
 A local CLI tool for organizing NetEase Cloud Music playlists with natural language.
 
+Ever had a big playlist packed with Cantonese tracks, late-night songs, workout songs, and random favorites, then realized pulling one category into a clean new playlist would take far too many clicks? Tasks like “extract all Cantonese songs from this playlist” or “separate the English commute tracks into a new playlist” are simple in theory and tedious in practice.
+
+This tool is built for that workflow. Describe the source playlist, the filter, and the target playlist in natural language, review the matched result first, then create the new playlist from the confirmed selection.
+
 This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi). It uses the API capabilities provided by that project, including login, playlists, tracks, lyrics, and song metadata, then wraps them into a personal playlist management workflow.
 
 ## Features
 
-- Natural language commands: describe the source playlist, filtering rule, and target playlist in one sentence.
+- Natural language commands: describe the source playlist, filtering rule, and target playlist in one sentence, including default playlists such as "Liked Songs".
 - QR code login: sign in with the NetEase Cloud Music mobile app.
 - Preview-first workflow: inspect matched tracks and reasons with `preview`, then create the playlist with `run`.
 - Artist filtering: fast local matching for artist names and aliases.
@@ -164,7 +182,7 @@ This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.
 
 ## Example Workflow
 
-```powershell
+```bash
 npm link
 preview
 run
@@ -176,12 +194,13 @@ run
 
 - Node.js 18+
 - npm
+- macOS, Linux, or Windows terminal
 - NetEase Cloud Music account
-- DeepSeek API Key
+- DeepSeek API Key, defaulting to `deepseek-v4-flash` with support for other DeepSeek API models
 
 ## Quick Start
 
-```powershell
+```bash
 git clone https://github.com/<your-name>/netease-playlist-assistant.git
 cd netease-playlist-assistant
 npm install
@@ -189,17 +208,22 @@ npm install
 
 Copy the environment example:
 
-```powershell
-Copy-Item .env.example .env
+```bash
+cp .env.example .env
 ```
 
 Edit `.env`:
 
 ```env
 DEEPSEEK_API_KEY=sk-your-deepseek-api-key
-DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_MODEL=deepseek-v4-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
+
+DeepSeek API references:
+
+- [DeepSeek API Docs](https://api-docs.deepseek.com/zh-cn/)
+- [DeepSeek Platform Docs](https://platform.deepseek.com/docs)
 
 Optional settings:
 
@@ -211,7 +235,7 @@ DEEPSEEK_BATCH_RETRIES=1
 
 ## Login
 
-```powershell
+```bash
 npm run login
 ```
 
@@ -221,7 +245,7 @@ The command prints a QR code in the terminal. Scan it with the NetEase Cloud Mus
 
 Preview matching results:
 
-```powershell
+```bash
 preview
 ```
 
@@ -233,19 +257,23 @@ Enter the full request in the prompt, for example:
 
 Create a playlist after preview:
 
-```powershell
+```bash
 run
 ```
 
 Switch DeepSeek models:
 
-```powershell
+```bash
 npm link
 model -- deepseek-v4-flash
 model -- deepseek-v4-pro
 ```
 
-Run `npm link` once in the project root. After that, `model -- deepseek-v4-flash` and `model -- deepseek-v4-pro` update `DEEPSEEK_MODEL` in `.env`.
+Run `npm link` once in the project root. After that, `preview`, `run`, `model -- deepseek-v4-flash`, and `model -- deepseek-v4-pro` are available in Windows PowerShell or the corresponding terminal on macOS.
+
+The current command entrypoints and path handling fit a standard terminal setup. The main prerequisite is Node.js 18+ with npm's global bin directory available in `PATH`, so the linked commands can be launched directly.
+
+The default model is `deepseek-v4-flash`. If you have access to another DeepSeek API model, you can switch to it with the `model` command.
 
 ## How It Works
 
@@ -266,7 +294,7 @@ These files are ignored by Git. Before publishing the repository, check that no 
 
 ## Development
 
-```powershell
+```bash
 npm run typecheck
 npm run format:check
 npm test

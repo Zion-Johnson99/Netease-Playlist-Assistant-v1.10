@@ -89,7 +89,7 @@ export function loadConfig(): AppConfig {
     dataDir,
     cookiePath,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
-    deepseekModel: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro",
+    deepseekModel: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
     deepseekBaseUrl:
       process.env.DEEPSEEK_BASE_URL ?? "https://api.deepseek.com",
     deepseekBatchConcurrency: readPositiveInteger(
