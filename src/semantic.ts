@@ -7,7 +7,6 @@ import { createSemanticDecisionKey, SemanticCache } from "./semantic-cache.js";
 import { MatchedSong, Song } from "./types.js";
 
 const defaultBatchSize = 30;
-const defaultConcurrency = 6;
 const defaultConfidenceThreshold = 0.75;
 const lyricSnippetLimit = 900;
 const metadataTextLimit = 5000;
@@ -48,6 +47,22 @@ type SemanticBatch = {
   index: number;
   contexts: SongSemanticContext[];
 };
+
+export function chooseSemanticReadConcurrency(songCount: number): number {
+  if (songCount >= 700) {
+    return 16;
+  }
+
+  if (songCount >= 300) {
+    return 12;
+  }
+
+  if (songCount >= 100) {
+    return 10;
+  }
+
+  return 8;
+}
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -552,7 +567,8 @@ export function createDeepseekSemanticMatcher(
     }
 
     const batchSize = options.batchSize ?? defaultBatchSize;
-    const concurrency = options.concurrency ?? defaultConcurrency;
+    const concurrency =
+      options.concurrency ?? chooseSemanticReadConcurrency(input.songs.length);
     const batchConcurrency =
       options.batchConcurrency ?? config.deepseekBatchConcurrency;
     const batchTimeoutMs =

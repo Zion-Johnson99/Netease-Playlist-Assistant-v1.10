@@ -47,13 +47,13 @@ type ApiPolicy = {
 
 const apiPolicies: Partial<Record<string, ApiPolicy>> = {
   lyric: {
-    concurrency: 4,
-    minIntervalMs: 120,
+    concurrency: 8,
+    minIntervalMs: 80,
     retryDelaysMs: [15_000, 30_000, 60_000],
   },
   song_wiki_summary: {
-    concurrency: 1,
-    minIntervalMs: 1_500,
+    concurrency: 3,
+    minIntervalMs: 500,
     retryDelaysMs: [30_000, 60_000],
   },
   ugc_song_get: {
