@@ -20,6 +20,7 @@
 - 歌手筛选：本地匹配歌手名与别名，适合“周杰伦的歌”“Justin Bieber 的歌”这类任务。
 - 语种筛选：结合歌词片段和 DeepSeek 判断粤语、英语、日语等语种。
 - 语义筛选：支持曲风、情绪、场景、年代等开放条件，例如 R&B、Hip-Hop、夜晚英文慢歌、跑步歌单。
+- 数量转移：支持“前 20 首”“筛出 10 首”这类数量条件，按源歌单原始顺序保留命中的前 N 首，适合从大歌单里截取一批结果。
 - 缓存复用：保存语义判断和最近一次预览结果，减少重复请求。
 - 接口调度：对网易云接口调用做限速、排队和重试，降低频繁操作带来的失败率。
 
@@ -33,8 +34,19 @@
 
 ## 快速开始
 
+获取项目有两种方式。
+
+方式一：使用 Git 克隆仓库。
+
 ```bash
-git clone https://github.com/<your-name>/netease-playlist-assistant.git
+git clone https://github.com/Zion-Johnson99/netease-playlist-assistant.git
+cd netease-playlist-assistant
+npm install
+```
+
+方式二：在 GitHub 页面点击 `Code` -> `Download ZIP`，解压后进入项目目录，再安装依赖。
+
+```bash
 cd netease-playlist-assistant
 npm install
 ```
@@ -88,6 +100,15 @@ npm link
 
 `npm link` 会把本项目的 `cn`、`en`、`login`、`list`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
 
+也可以不注册全局命令，直接在项目目录内运行 npm scripts：
+
+```bash
+npm run login
+npm run list
+npm run preview
+npm run run
+```
+
 设置中文环境：
 
 ```bash
@@ -130,7 +151,7 @@ model -- deepseek-v4-pro
 preview
 ```
 
-![preview 模式](docs/images/02-preview-mode.png)
+![preview 模式](docs/images/02-preview-cn.jpg)
 
 启动后在对话框里输入完整需求，例如：
 
@@ -140,17 +161,16 @@ preview
 
 常见筛选方式：
 
-按歌手或歌曲名筛选：
-
-![按名字筛选歌曲](docs/images/03-filter-by-artist.png)
-
-按曲风筛选：
-
-![按曲风筛选歌曲](docs/images/04-filter-by-genre.png)
-
-按歌曲信息描述筛选：
-
-![按歌曲信息描述筛选](docs/images/05-filter-by-description.png)
+<table>
+  <tr>
+    <td><strong>按歌手或歌曲名筛选</strong><br><img src="docs/images/03-filter-artist-cn.jpg" alt="按歌手或歌曲名筛选"></td>
+    <td><strong>按语种筛选</strong><br><img src="docs/images/04-filter-language-cn.jpg" alt="按语种筛选"></td>
+  </tr>
+  <tr>
+    <td><strong>按曲风筛选</strong><br><img src="docs/images/05-filter-genre-cn.jpg" alt="按曲风筛选"></td>
+    <td><strong>按场景筛选</strong><br><img src="docs/images/06-filter-scene-cn.jpg" alt="按场景筛选"></td>
+  </tr>
+</table>
 
 确认后创建新歌单：
 
@@ -158,15 +178,22 @@ preview
 run
 ```
 
-![run 模式](docs/images/06-run-mode.png)
+![run 模式](docs/images/07-run-cn.jpg)
 
 启动后输入同一条完整需求。
 
 运行完成后，可以在网易云音乐里查看创建结果：
 
-![结果展示 1](docs/images/07-result-01.png)
-
-![结果展示 2](docs/images/07-result-02.png)
+<table>
+  <tr>
+    <td><strong>歌手筛选结果</strong><br><img src="docs/images/08-result-artist-cn.jpg" alt="歌手筛选结果"></td>
+    <td><strong>语种筛选结果</strong><br><img src="docs/images/09-result-language-cn.jpg" alt="语种筛选结果"></td>
+  </tr>
+  <tr>
+    <td><strong>曲风筛选结果</strong><br><img src="docs/images/10-result-genre-cn.jpg" alt="曲风筛选结果"></td>
+    <td><strong>场景筛选结果</strong><br><img src="docs/images/11-result-scene-cn.jpg" alt="场景筛选结果"></td>
+  </tr>
+</table>
 
 ## 筛选机制
 
@@ -228,6 +255,7 @@ This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.
 - Artist filtering: fast local matching for artist names and aliases.
 - Language filtering: uses lyrics and DeepSeek to detect languages such as Cantonese, English, and Japanese.
 - Semantic filtering: supports genres, moods, scenes, eras, and open-ended music descriptions.
+- Count-limited transfer: supports requests such as "first 20 tracks" or "pick 10 songs", then keeps the first N matches in the original playlist order.
 - Local cache: reuses semantic decisions and the latest preview result.
 - API scheduling: queues, rate-limits, and retries selected NetEase API calls.
 
@@ -241,8 +269,19 @@ This project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.
 
 ## Quick Start
 
+There are two ways to get the project.
+
+Option 1: clone the repository with Git.
+
 ```bash
-git clone https://github.com/<your-name>/netease-playlist-assistant.git
+git clone https://github.com/Zion-Johnson99/netease-playlist-assistant.git
+cd netease-playlist-assistant
+npm install
+```
+
+Option 2: open the GitHub page, click `Code` -> `Download ZIP`, extract it, enter the project directory, then install dependencies.
+
+```bash
 cd netease-playlist-assistant
 npm install
 ```
@@ -296,6 +335,15 @@ npm link
 
 `npm link` registers this project's `cn`, `en`, `login`, `list`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
 
+You can also skip global command registration and run npm scripts inside the project directory:
+
+```bash
+npm run login
+npm run list
+npm run preview
+npm run run
+```
+
 Set English as the active language:
 
 ```bash
@@ -338,7 +386,7 @@ Preview matching results:
 preview
 ```
 
-![preview mode](docs/images/02-preview-mode.png)
+![preview mode](docs/images/02-preview-en.jpg)
 
 Enter the full request in the prompt, for example:
 
@@ -348,17 +396,16 @@ Find all Cantonese songs in playlist A and add them to a new playlist named Cant
 
 Common filtering examples:
 
-Filter by artist or song name:
-
-![filter by name](docs/images/03-filter-by-artist.png)
-
-Filter by genre:
-
-![filter by genre](docs/images/04-filter-by-genre.png)
-
-Filter by song description:
-
-![filter by song description](docs/images/05-filter-by-description.png)
+<table>
+  <tr>
+    <td><strong>Filter by artist or song name</strong><br><img src="docs/images/03-filter-artist-en.jpg" alt="Filter by artist or song name"></td>
+    <td><strong>Filter by language</strong><br><img src="docs/images/04-filter-language-en.jpg" alt="Filter by language"></td>
+  </tr>
+  <tr>
+    <td><strong>Filter by genre</strong><br><img src="docs/images/05-filter-genre-en.jpg" alt="Filter by genre"></td>
+    <td><strong>Filter by scene</strong><br><img src="docs/images/06-filter-scene-en.jpg" alt="Filter by scene"></td>
+  </tr>
+</table>
 
 Create a playlist after preview:
 
@@ -366,13 +413,20 @@ Create a playlist after preview:
 run
 ```
 
-![run mode](docs/images/06-run-mode.png)
+![run mode](docs/images/07-run-en.jpg)
 
 After completion, check the created playlist in NetEase Cloud Music:
 
-![result 1](docs/images/07-result-01.png)
-
-![result 2](docs/images/07-result-02.png)
+<table>
+  <tr>
+    <td><strong>Artist result</strong><br><img src="docs/images/08-result-artist-en.jpg" alt="Artist result"></td>
+    <td><strong>Language result</strong><br><img src="docs/images/09-result-language-en.jpg" alt="Language result"></td>
+  </tr>
+  <tr>
+    <td><strong>Genre result</strong><br><img src="docs/images/10-result-genre-en.jpg" alt="Genre result"></td>
+    <td><strong>Scene result</strong><br><img src="docs/images/11-result-scene-en.jpg" alt="Scene result"></td>
+  </tr>
+</table>
 
 ## How It Works
 
