@@ -8,28 +8,63 @@ import {
   validateNoArgs,
 } from "../src/cli.js";
 
-test("creates preview interactive intro", () => {
-  const intro = createInteractiveIntro("preview");
+const ansiPattern = /\u001b\[[0-9;]*m/g;
 
-  assert.match(intro, /模式：预览/);
-  assert.match(intro, /源歌单、筛选条件、新歌单名称/);
+function stripAnsi(value: string): string {
+  return value.replace(ansiPattern, "");
+}
+
+function assertClosedFrame(intro: string): void {
+  const lines = intro.split("\n").map(stripAnsi);
+
+  assert.match(lines[0], /^╭─+╮$/);
+  assert.match(lines[lines.length - 1], /^╰─+╯$/);
+  for (const line of lines.slice(1, -1)) {
+    assert.match(line, /^│.*│$/);
+  }
+}
+
+test("creates preview interactive intro", () => {
+  const intro = createInteractiveIntro("preview", "cn", "deepseek-v4-pro");
+
+  assert.match(intro, /\u001b\[90m模式：\u001b\[0m \u001b\[94m预览\u001b\[0m/);
+  assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-pro/);
+  assert.match(intro, /源歌单、筛选条件、目标歌单名/);
   assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
+  assert.match(intro, /叫做粤语精选/);
+  assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
+  assert.match(intro, /╯\u001b\[0m$/);
+  assert.match(intro, /\u001b\[101m\u001b\[97m ◎ /);
+  assertClosedFrame(intro);
 });
 
 test("creates run interactive intro", () => {
   const intro = createInteractiveIntro("execute");
 
-  assert.match(intro, /模式：建立歌单/);
-  assert.match(intro, /复用匹配的最近预览结果/);
+  assert.match(
+    intro,
+    /\u001b\[90m模式：\u001b\[0m \u001b\[92m建立歌单\u001b\[0m/,
+  );
+  assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-flash/);
+  assert.match(intro, /优先复用结果/);
   assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
+  assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
+  assertClosedFrame(intro);
 });
 
 test("creates English preview interactive intro", () => {
   const intro = createInteractiveIntro("preview", "en");
 
-  assert.match(intro, /Mode: preview/);
-  assert.match(intro, /source playlist, filter, and new playlist name/);
-  assert.match(intro, /Find all Cantonese songs/);
+  assert.match(
+    intro,
+    /\u001b\[90mmode:\u001b\[0m \u001b\[94mpreview\u001b\[0m/,
+  );
+  assert.match(intro, /\u001b\[90mmodel:\u001b\[0m deepseek-v4-flash/);
+  assert.match(intro, /source playlist, filter, target name/);
+  assert.match(intro, /Find all Cantonese songs in playlist xx/);
+  assert.match(intro, /new playlist named/);
+  assert.match(intro, /Cantonese Picks/);
+  assertClosedFrame(intro);
 });
 
 test("rejects command arguments in interactive mode", () => {

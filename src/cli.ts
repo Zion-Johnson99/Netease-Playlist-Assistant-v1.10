@@ -39,6 +39,115 @@ type TerminalProgress = {
   warn: (message: string) => void;
 };
 
+const introAnsi = {
+  reset: "\u001b[0m",
+  brightWhite: "\u001b[97m",
+  mutedGray: "\u001b[90m",
+  logoBg: "\u001b[101m",
+  borderRed: "\u001b[38;2;220;72;82m",
+  modeBlue: "\u001b[94m",
+  modeGreen: "\u001b[92m",
+} as const;
+
+const ansiPattern = /\u001b\[[0-9;]*m/g;
+const introContentWidth = 56;
+
+function stripAnsi(value: string): string {
+  return value.replace(ansiPattern, "");
+}
+
+function getDisplayWidth(value: string): number {
+  return Array.from(stripAnsi(value)).reduce((width, char) => {
+    return width + (char.charCodeAt(0) > 0xff ? 2 : 1);
+  }, 0);
+}
+
+function colorModeValue(mode: Mode, value: string): string {
+  const color = mode === "preview" ? introAnsi.modeBlue : introAnsi.modeGreen;
+  return `${color}${value}${introAnsi.reset}`;
+}
+
+function colorLabel(value: string): string {
+  return `${introAnsi.mutedGray}${value}${introAnsi.reset}`;
+}
+
+function colorBorder(value: string): string {
+  return `${introAnsi.borderRed}${value}${introAnsi.reset}`;
+}
+
+function wrapDisplayText(value: string, maxWidth: number): string[] {
+  if (value.includes(" ")) {
+    const lines: string[] = [];
+    let current = "";
+
+    for (const word of value.split(" ")) {
+      const next = current ? `${current} ${word}` : word;
+      if (current && getDisplayWidth(next) > maxWidth) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+
+    return lines;
+  }
+
+  const lines: string[] = [];
+  let current = "";
+  let currentWidth = 0;
+
+  for (const char of Array.from(value)) {
+    const charWidth = char.charCodeAt(0) > 0xff ? 2 : 1;
+    if (currentWidth > 0 && currentWidth + charWidth > maxWidth) {
+      lines.push(current);
+      current = "";
+      currentWidth = 0;
+    }
+    current += char;
+    currentWidth += charWidth;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
+}
+
+function formatIntroField(label: string, value: string): string[] {
+  const labelWidth = getDisplayWidth(label);
+  const prefix = `${colorLabel(label)} `;
+  const continuationPrefix = " ".repeat(labelWidth + 1);
+  const wrapped = wrapDisplayText(value, introContentWidth - labelWidth - 1);
+
+  return wrapped.map((line, index) => {
+    return `${index === 0 ? prefix : continuationPrefix}${line}`;
+  });
+}
+
+function createSoftNeteaseFrame(lines: string[]): string {
+  const horizontalWidth = Math.max(
+    introContentWidth + 4,
+    ...lines.map((line) => getDisplayWidth(line) + 4),
+  );
+  const top = colorBorder(`╭${"─".repeat(horizontalWidth)}╮`);
+  const bottom = colorBorder(`╰${"─".repeat(horizontalWidth)}╯`);
+  const vertical = colorBorder("│");
+  const framedLines = lines.map((line) => {
+    const rightPadding = " ".repeat(
+      horizontalWidth - getDisplayWidth(line) - 2,
+    );
+    return `${vertical}  ${line}${rightPadding}${vertical}`;
+  });
+
+  return [top, ...framedLines, bottom].join("\n");
+}
+
 function getArtistsDisplay(song: Song, locale: AppLocale): string {
   return (
     song.artists
@@ -418,62 +527,54 @@ function getInstruction(args: string[], locale: AppLocale): string {
 export function createInteractiveIntro(
   mode: Mode,
   locale: AppLocale = "cn",
+  model = "deepseek-v4-flash",
 ): string {
-  if (locale === "en") {
-    if (mode === "preview") {
-      return [
-        "┌─ Netease Playlist Assistant",
-        "│  Mode: preview",
-        "│",
-        "│  Describe your playlist cleanup request",
-        "│  Include the source playlist, filter, and new playlist name",
-        "│",
-        "│  Example:",
-        "│  Find all Cantonese songs in playlist xx and put them in a new playlist named xx",
-        "└─",
-      ].join("\n");
-    }
+  const logo = `${introAnsi.logoBg}${introAnsi.brightWhite} ◎ ${introAnsi.reset}`;
+  const title = `${logo} ${introAnsi.brightWhite}Netease Playlist Assistant${introAnsi.reset}`;
+  const modeText =
+    locale === "en"
+      ? mode === "preview"
+        ? "preview"
+        : "create playlist"
+      : mode === "preview"
+        ? "预览"
+        : "建立歌单";
+  const hint =
+    locale === "en"
+      ? mode === "preview"
+        ? "source playlist, filter, target name"
+        : "same request as preview, reuse recent result"
+      : mode === "preview"
+        ? "源歌单、筛选条件、目标歌单名"
+        : "预览同款文本，优先复用结果";
+  const example =
+    locale === "en"
+      ? "Find all Cantonese songs in playlist xx, list them, then add them to a new playlist named Cantonese Picks"
+      : "帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做粤语精选";
+  const lines =
+    locale === "en"
+      ? [
+          title,
+          ...formatIntroField("mode:", colorModeValue(mode, modeText)),
+          ...formatIntroField("model:", model),
+          "",
+          ...formatIntroField("request:", hint),
+          ...formatIntroField("example:", example),
+        ]
+      : [
+          title,
+          ...formatIntroField("模式：", colorModeValue(mode, modeText)),
+          ...formatIntroField("模型：", model),
+          "",
+          ...formatIntroField("需求：", hint),
+          ...formatIntroField("示例：", example),
+        ];
 
-    return [
-      "┌─ Netease Playlist Assistant",
-      "│  Mode: create playlist",
-      "│",
-      "│  Describe your playlist cleanup request",
-      "│  Use the same request you previewed",
-      "│  The tool will reuse a matching recent preview result first",
-      "│",
-      "│  Example:",
-      "│  Find all Cantonese songs in playlist xx and put them in a new playlist named xx",
-      "└─",
-    ].join("\n");
-  }
-
-  if (mode === "preview") {
-    return [
-      "┌─ Netease Playlist Assistant",
-      "│  模式：预览",
-      "│",
-      "│  请说出你的歌单整理需求",
-      "│  建议写清楚：源歌单、筛选条件、新歌单名称",
-      "│",
-      "│  示例：",
-      "│  帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx",
-      "└─",
-    ].join("\n");
-  }
-
-  return [
-    "┌─ Netease Playlist Assistant",
-    "│  模式：建立歌单",
-    "│",
-    "│  请说出你的歌单整理需求",
-    "│  建议输入刚才预览过的同一条需求",
-    "│  工具会优先复用匹配的最近预览结果",
-    "│",
-    "│  示例：",
-    "│  帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做xx",
-    "└─",
-  ].join("\n");
+  return createSoftNeteaseFrame(
+    lines.filter((line, index) => {
+      return line !== "" || lines[index - 1] !== "";
+    }),
+  );
 }
 
 export function validateInteractiveArgs(
@@ -512,7 +613,8 @@ async function promptInstruction(
   mode: Mode,
   locale: AppLocale,
 ): Promise<string> {
-  console.log(createInteractiveIntro(mode, locale));
+  const config = loadConfig();
+  console.log(createInteractiveIntro(mode, locale, config.deepseekModel));
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
