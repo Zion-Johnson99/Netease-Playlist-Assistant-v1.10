@@ -15,6 +15,7 @@ export type Song = {
 export const TaskSchema = z.object({
   sourcePlaylistName: z.string().min(1),
   targetPlaylistName: z.string().min(1),
+  limit: z.number().int().positive().optional(),
   filter: z.discriminatedUnion("type", [
     z.object({
       type: z.literal("language"),

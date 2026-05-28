@@ -218,6 +218,10 @@ export function formatPlaylistTable(
   );
 }
 
+export function applyTaskLimit<T>(items: T[], task: PlaylistTask): T[] {
+  return task.limit === undefined ? items : items.slice(0, task.limit);
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -515,15 +519,16 @@ async function executeStructuredTask(
     return;
   }
 
+  const selected = applyTaskLimit(matched, task);
   console.log(
     text(
       config.locale,
-      `匹配歌曲：${matched.length}`,
-      `Matched tracks: ${matched.length}`,
+      `匹配歌曲：${selected.length}`,
+      `Matched tracks: ${selected.length}`,
     ),
   );
   console.log("");
-  for (const line of formatMatchedSongsTable(matched, config.locale)) {
+  for (const line of formatMatchedSongsTable(selected, config.locale)) {
     console.log(line);
   }
 
@@ -532,8 +537,9 @@ async function executeStructuredTask(
       sourcePlaylistId: source.id,
       sourcePlaylistName: task.sourcePlaylistName,
       targetPlaylistName: task.targetPlaylistName,
+      limit: task.limit,
       filter: task.filter,
-      matchedSongs: matched,
+      matchedSongs: selected,
     });
     console.log(
       text(
@@ -552,7 +558,7 @@ async function executeStructuredTask(
   );
   await addSongsToPlaylist(
     target.id,
-    matched.map((song) => song.id),
+    selected.map((song) => song.id),
     cookie,
     config.locale,
   );
@@ -560,8 +566,8 @@ async function executeStructuredTask(
   console.log(
     text(
       config.locale,
-      `已创建歌单并添加歌曲：${target.name}，共 ${matched.length} 首`,
-      `Created playlist and added tracks: ${target.name}, ${matched.length} total`,
+      `已创建歌单并添加歌曲：${target.name}，共 ${selected.length} 首`,
+      `Created playlist and added tracks: ${target.name}, ${selected.length} total`,
     ),
   );
 }

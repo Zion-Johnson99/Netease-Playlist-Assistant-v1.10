@@ -81,6 +81,29 @@ test("ignores preview cache for different task", () => {
   assert.equal(cache, null);
 });
 
+test("ignores preview cache for different limit", () => {
+  const config = createTestConfig();
+  savePreviewCache(config, {
+    sourcePlaylistId: 1,
+    sourcePlaylistName: "两首",
+    targetPlaylistName: "粤语精选",
+    limit: 10,
+    filter: task.filter,
+    matchedSongs: [],
+  });
+
+  const cache = readMatchingPreviewCache(
+    config,
+    {
+      ...task,
+      limit: 5,
+    },
+    1,
+  );
+
+  assert.equal(cache, null);
+});
+
 test("stores preview cache under locale data directory", () => {
   const config = createTestConfig();
   savePreviewCache(config, {

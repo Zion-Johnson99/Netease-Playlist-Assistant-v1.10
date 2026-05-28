@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyTaskLimit,
   createInteractiveIntro,
   formatTerminalProgressLine,
   formatMatchedSongsTable,
@@ -174,4 +175,50 @@ test("formats playlists without translating playlist names", () => {
     "01   1   20      我喜欢的音乐",
     "02   2   8       City Pop 夜行",
   ]);
+});
+
+test("applies task limit in original match order", () => {
+  const selected = applyTaskLimit(
+    [
+      { id: 1, name: "A" },
+      { id: 2, name: "B" },
+      { id: 3, name: "C" },
+    ],
+    {
+      sourcePlaylistName: "宝藏",
+      targetPlaylistName: "助眠0528",
+      limit: 2,
+      filter: {
+        type: "semantic",
+        value: "睡觉听的纯音乐",
+      },
+    },
+  );
+
+  assert.deepEqual(
+    selected.map((song) => song.id),
+    [1, 2],
+  );
+});
+
+test("keeps all matches when task has no limit", () => {
+  const selected = applyTaskLimit(
+    [
+      { id: 1, name: "A" },
+      { id: 2, name: "B" },
+    ],
+    {
+      sourcePlaylistName: "宝藏",
+      targetPlaylistName: "助眠0528",
+      filter: {
+        type: "semantic",
+        value: "睡觉听的纯音乐",
+      },
+    },
+  );
+
+  assert.deepEqual(
+    selected.map((song) => song.id),
+    [1, 2],
+  );
 });

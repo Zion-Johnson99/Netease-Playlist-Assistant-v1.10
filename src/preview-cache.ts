@@ -8,6 +8,7 @@ export type PreviewCache = {
   sourcePlaylistId: number;
   sourcePlaylistName: string;
   targetPlaylistName: string;
+  limit?: number;
   filter: PlaylistTask["filter"];
   matchedSongs: MatchedSong[];
   createdAt: string;
@@ -60,6 +61,7 @@ export function readMatchingPreviewCache(
     cache.locale !== config.locale ||
     cache.sourcePlaylistName !== task.sourcePlaylistName ||
     cache.targetPlaylistName !== task.targetPlaylistName ||
+    cache.limit !== task.limit ||
     !isSameFilter(cache.filter, task.filter)
   ) {
     return null;

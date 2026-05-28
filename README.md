@@ -186,7 +186,7 @@ run
 - `.netease-assistant/en/last-preview.json`：英文环境最近一次预览结果。
 - `.env`：DeepSeek API Key 和模型配置。
 
-这些文件已写入 `.gitignore`，上传 public 仓库前请确认没有提交本地 Cookie、API Key 或个人歌单缓存。
+这些文件已写入 `.gitignore`，上传 public 仓库前请确认没有提交本地 Cookie、API Key 或个人歌单缓存，务必不要向他人泄露本地网易云 Cookie和自己的 API Key。
 
 ## 开发
 
