@@ -35,6 +35,7 @@ type Mode = "execute" | "preview";
 type TerminalProgress = {
   update: (message: string) => void;
   finish: () => void;
+  clear: () => void;
   elapsed: () => string;
   warn: (message: string) => void;
 };
@@ -177,15 +178,20 @@ export function formatMatchedSongsTable(
     })),
     [
       { header: text(locale, "序号", "No."), value: (row) => row.index },
-      { header: text(locale, "歌曲", "Track"), value: (row) => row.name },
+      {
+        header: text(locale, "歌曲", "Track"),
+        value: (row) => row.name,
+        maxWidth: locale === "cn" ? 30 : undefined,
+      },
       {
         header: text(locale, "歌手", "Artists"),
         value: (row) => row.artists,
+        maxWidth: locale === "cn" ? 28 : undefined,
       },
       {
         header: text(locale, "理由", "Reason"),
         value: (row) => row.reason,
-        maxWidth: 72,
+        maxWidth: locale === "cn" ? 48 : 72,
       },
     ],
   );
@@ -267,6 +273,14 @@ export function formatTerminalProgressLine(
   return `${truncateByDisplayWidth(normalizedMessage, messageWidth)}${suffix}`;
 }
 
+export function formatDeepseekParseProgressMessage(locale: AppLocale): string {
+  return text(
+    locale,
+    "（正在调用 DeepSeek 解析需求，最多等待 30 秒...）",
+    "Calling DeepSeek to parse the request. Waiting up to 30 seconds...",
+  );
+}
+
 export function createTerminalProgress(): TerminalProgress {
   let active = false;
   const startedAt = Date.now();
@@ -284,6 +298,18 @@ export function createTerminalProgress(): TerminalProgress {
     }
 
     process.stdout.write("\n");
+    active = false;
+  };
+
+  const clear = (): void => {
+    if (!active) {
+      return;
+    }
+
+    if (process.stdout.isTTY) {
+      readline.clearLine(process.stdout, 0);
+      readline.cursorTo(process.stdout, 0);
+    }
     active = false;
   };
 
@@ -310,6 +336,7 @@ export function createTerminalProgress(): TerminalProgress {
   return {
     update: render,
     finish,
+    clear,
     elapsed,
     warn: (message: string): void => {
       finish();
@@ -330,18 +357,20 @@ async function runTask(instruction: string, mode: Mode): Promise<void> {
     ),
   );
   const playlists = await listOwnPlaylists(cookie, profile);
-  console.log(
-    text(
-      config.locale,
-      `正在调用 DeepSeek 解析需求，最多等待 30 秒...`,
-      `Calling DeepSeek to parse the request. Waiting up to 30 seconds...`,
-    ),
-  );
-  const task = await parseInstruction(
-    instruction,
-    config,
-    playlists.map((playlist) => playlist.name),
-  );
+  const parseProgress = createTerminalProgress();
+  parseProgress.update(formatDeepseekParseProgressMessage(config.locale));
+  let task: PlaylistTask;
+  try {
+    task = await parseInstruction(
+      instruction,
+      config,
+      playlists.map((playlist) => playlist.name),
+    );
+  } catch (error) {
+    parseProgress.finish();
+    throw error;
+  }
+  parseProgress.clear();
 
   await executeStructuredTask(task, cookie, mode, playlists);
 }

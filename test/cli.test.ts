@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   applyTaskLimit,
   createInteractiveIntro,
+  formatDeepseekParseProgressMessage,
   formatTerminalProgressLine,
   formatMatchedSongsTable,
   formatPlaylistTable,
@@ -151,6 +152,13 @@ test("keeps English terminal progress on one display line", () => {
   assert.equal(line.includes("\n"), false);
   assert.ok(displayWidth(line) <= 80);
   assert.match(line, /, elapsed 01:18$/);
+});
+
+test("formats Chinese DeepSeek parse progress with full-width parentheses", () => {
+  assert.equal(
+    formatDeepseekParseProgressMessage("cn"),
+    "（正在调用 DeepSeek 解析需求，最多等待 30 秒...）",
+  );
 });
 
 test("formats playlists without translating playlist names", () => {

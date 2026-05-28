@@ -45,10 +45,67 @@ function padEndByDisplayWidth(value: string, width: number): string {
   return value + " ".repeat(Math.max(0, width - displayWidth(value)));
 }
 
+function hasWideCharacter(value: string): boolean {
+  for (const character of value) {
+    if (displayWidth(character) > 1) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function wrapDisplayText(value: string, maxWidth: number): string[] {
   if (maxWidth <= 0 || displayWidth(value) <= maxWidth) {
     return [value];
   }
+
+  const wrapByWidth = (text: string): string[] => {
+    const lines: string[] = [];
+    let current = "";
+    let currentWidth = 0;
+
+    for (const character of text) {
+      const characterWidth = displayWidth(character);
+      if (currentWidth > 0 && currentWidth + characterWidth > maxWidth) {
+        lines.push(current);
+        current = "";
+        currentWidth = 0;
+      }
+
+      current += character;
+      currentWidth += characterWidth;
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+
+    return lines;
+  };
+
+  const splitByWidth = (
+    text: string,
+    width: number,
+  ): { head: string; tail: string } => {
+    let head = "";
+    let headWidth = 0;
+
+    for (const character of text) {
+      const characterWidth = displayWidth(character);
+      if (headWidth + characterWidth > width) {
+        return {
+          head,
+          tail: text.slice(head.length),
+        };
+      }
+
+      head += character;
+      headWidth += characterWidth;
+    }
+
+    return { head, tail: "" };
+  };
 
   if (value.includes(" ")) {
     const lines: string[] = [];
@@ -57,41 +114,36 @@ function wrapDisplayText(value: string, maxWidth: number): string[] {
     for (const word of value.split(" ")) {
       const next = current ? `${current} ${word}` : word;
       if (current && displayWidth(next) > maxWidth) {
-        lines.push(current);
-        current = word;
+        const wordWidth = displayWidth(word);
+        const remainingWidth = maxWidth - displayWidth(current) - 1;
+        const { head, tail } =
+          wordWidth > maxWidth ||
+          (hasWideCharacter(word) && wordWidth > remainingWidth)
+            ? splitByWidth(word, remainingWidth)
+            : { head: "", tail: "" };
+
+        if (head) {
+          lines.push(`${current} ${head}`);
+          const tailLines = wrapByWidth(tail);
+          lines.push(...tailLines.slice(0, -1));
+          current = tailLines.at(-1) ?? "";
+        } else {
+          lines.push(...wrapByWidth(current));
+          current = word;
+        }
       } else {
         current = next;
       }
     }
 
     if (current) {
-      lines.push(current);
+      lines.push(...wrapByWidth(current));
     }
 
     return lines;
   }
 
-  const lines: string[] = [];
-  let current = "";
-  let currentWidth = 0;
-
-  for (const character of value) {
-    const characterWidth = displayWidth(character);
-    if (currentWidth > 0 && currentWidth + characterWidth > maxWidth) {
-      lines.push(current);
-      current = "";
-      currentWidth = 0;
-    }
-
-    current += character;
-    currentWidth += characterWidth;
-  }
-
-  if (current) {
-    lines.push(current);
-  }
-
-  return lines;
+  return wrapByWidth(value);
 }
 
 export function formatTable<Row>(

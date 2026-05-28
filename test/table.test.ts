@@ -63,3 +63,28 @@ test("wraps long cells inside their own column", () => {
     "                     snippet.",
   ]);
 });
+
+test("wraps long Chinese segments inside their own column", () => {
+  const lines = formatTable(
+    [
+      {
+        index: "13",
+        song: "The Campfire",
+        artist: "Peder B. Helland",
+        reason: "语义匹配 0.90：BPM120但新世纪冥想放松治愈，非常舒缓",
+      },
+    ],
+    [
+      { header: "序号", value: (row) => row.index },
+      { header: "歌曲", value: (row) => row.song },
+      { header: "歌手", value: (row) => row.artist },
+      { header: "理由", value: (row) => row.reason, maxWidth: 28 },
+    ],
+  );
+
+  assert.deepEqual(lines, [
+    "序号  歌曲          歌手              理由",
+    "13    The Campfire  Peder B. Helland  语义匹配 0.90：BPM120但新世",
+    "                                      纪冥想放松治愈，非常舒缓",
+  ]);
+});
