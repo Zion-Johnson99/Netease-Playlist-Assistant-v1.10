@@ -2,6 +2,12 @@
 
 [中文](README.md) | English
 
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6)
+![CLI](https://img.shields.io/badge/CLI-local-555555)
+![NetEase Cloud Music](https://img.shields.io/badge/NetEase%20Cloud%20Music-playlist-C20C0C)
+![license](https://img.shields.io/badge/license-MIT-green)
+
 A local CLI tool that organizes NetEase Cloud Music playlists from plain-language requests.
 
 Large playlists get messy quickly. Cantonese tracks, Japanese songs, English slow songs, workout music, and old favorites all end up in the same place. When you want to pull out one group, manual cleanup means scrolling, clicking, and still missing tracks. This tool handles that workflow: describe the source playlist, the filter, and the new playlist name; preview the matches first; then create the playlist after you confirm the result.

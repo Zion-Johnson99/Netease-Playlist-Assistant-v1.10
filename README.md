@@ -2,6 +2,12 @@
 
 中文 | [English](README.en.md)
 
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6)
+![CLI](https://img.shields.io/badge/CLI-local-555555)
+![NetEase Cloud Music](https://img.shields.io/badge/NetEase%20Cloud%20Music-playlist-C20C0C)
+![license](https://img.shields.io/badge/license-MIT-green)
+
 用自然语言整理网易云音乐歌单的本地 CLI 工具。
 
 歌单一大，整理就容易变成体力活：粤语歌、日语歌、英文慢歌、健身歌、怀旧歌全混在一起，临时想拎出一类，经常要翻很久、点很多次，还容易漏掉几首。这个工具处理的就是这类场景：你说清楚源歌单、筛选条件和新歌单名，它先给出预览，确认后再创建歌单并写入命中的歌曲。
