@@ -182,7 +182,11 @@ export function formatMatchedSongsTable(
         header: text(locale, "歌手", "Artists"),
         value: (row) => row.artists,
       },
-      { header: text(locale, "理由", "Reason"), value: (row) => row.reason },
+      {
+        header: text(locale, "理由", "Reason"),
+        value: (row) => row.reason,
+        maxWidth: 72,
+      },
     ],
   );
 }
@@ -218,7 +222,48 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function createTerminalProgress(): TerminalProgress {
+function truncateByDisplayWidth(value: string, maxWidth: number): string {
+  if (maxWidth <= 0 || displayWidth(value) <= maxWidth) {
+    return value;
+  }
+
+  const marker = "...";
+  const contentWidth = Math.max(0, maxWidth - displayWidth(marker));
+  let output = "";
+  let outputWidth = 0;
+
+  for (const character of value) {
+    const characterWidth = displayWidth(character);
+    if (outputWidth + characterWidth > contentWidth) {
+      break;
+    }
+
+    output += character;
+    outputWidth += characterWidth;
+  }
+
+  return `${output}${marker}`;
+}
+
+export function formatTerminalProgressLine(
+  message: string,
+  locale: AppLocale,
+  elapsed: string,
+  columns: number,
+): string {
+  const normalizedMessage = message.replace(/\r?\n/g, " ");
+  const suffix = text(locale, `，耗时 ${elapsed}`, `, elapsed ${elapsed}`);
+  const maxWidth = Math.max(1, columns);
+  const messageWidth = maxWidth - displayWidth(suffix);
+
+  if (messageWidth <= 0) {
+    return truncateByDisplayWidth(`${normalizedMessage}${suffix}`, maxWidth);
+  }
+
+  return `${truncateByDisplayWidth(normalizedMessage, messageWidth)}${suffix}`;
+}
+
+export function createTerminalProgress(): TerminalProgress {
   let active = false;
   const startedAt = Date.now();
 
@@ -240,11 +285,12 @@ function createTerminalProgress(): TerminalProgress {
 
   const render = (message: string): void => {
     const locale = readLocale();
-    const singleLine = text(
+    const singleLine = formatTerminalProgressLine(
+      message,
       locale,
-      `${message}，耗时 ${elapsed()}`,
-      `${message}, elapsed ${elapsed()}`,
-    ).replace(/\r?\n/g, " ");
+      elapsed(),
+      process.stdout.columns ?? 80,
+    );
     if (!process.stdout.isTTY) {
       console.log(singleLine);
       active = false;

@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createInteractiveIntro,
+  formatTerminalProgressLine,
   formatMatchedSongsTable,
   formatPlaylistTable,
   validateInteractiveArgs,
   validateNoArgs,
 } from "../src/cli.js";
+import { displayWidth } from "../src/table.js";
 
 const ansiPattern = /\u001b\[[0-9;]*m/g;
 
@@ -113,6 +115,41 @@ test("formats matched songs as one-line aligned table", () => {
     "01    Forever Yours  J. Brown  语义匹配 0.90：浪漫婚礼主题",
     "02    好天气         韦礼安    语义匹配 0.90：旋律轻快温暖",
   ]);
+});
+
+test("wraps English matched song reasons in the reason column", () => {
+  const lines = formatMatchedSongsTable(
+    [
+      {
+        id: 1,
+        name: "单车",
+        artists: [{ name: "陈奕迅" }],
+        reason:
+          "Semantic match 0.98: Lyrics are in Cantonese, as confirmed by the song artist Eason Chan and the lyric snippet.",
+      },
+    ],
+    "en",
+  );
+
+  assert.equal(lines[0], "No.  Track  Artists  Reason");
+  assert.match(lines[1] ?? "", /^01\s+单车\s+陈奕迅\s+Semantic match 0\.98:/);
+  assert.match(
+    lines[2] ?? "",
+    /^\s+artist Eason Chan and the lyric snippet\.$/,
+  );
+});
+
+test("keeps English terminal progress on one display line", () => {
+  const line = formatTerminalProgressLine(
+    "DeepSeek judging: [████░░░░░░░░░░░░░░░░░░░░] 16% completed 120/755, batch 7/19, running 4, failed batches 0",
+    "en",
+    "01:18",
+    80,
+  );
+
+  assert.equal(line.includes("\n"), false);
+  assert.ok(displayWidth(line) <= 80);
+  assert.match(line, /, elapsed 01:18$/);
 });
 
 test("formats playlists without translating playlist names", () => {

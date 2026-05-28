@@ -36,3 +36,30 @@ test("formats rows into left aligned table columns", () => {
     "02    好天气         韦礼安    语义匹配 0.90：旋律轻快温暖",
   ]);
 });
+
+test("wraps long cells inside their own column", () => {
+  const lines = formatTable(
+    [
+      {
+        index: "16",
+        song: "单车",
+        artist: "陈奕迅",
+        reason:
+          "Semantic match 0.98: Lyrics are in Cantonese, as confirmed by the song artist Eason Chan and the lyric snippet.",
+      },
+    ],
+    [
+      { header: "No.", value: (row) => row.index },
+      { header: "Track", value: (row) => row.song },
+      { header: "Artists", value: (row) => row.artist },
+      { header: "Reason", value: (row) => row.reason, maxWidth: 54 },
+    ],
+  );
+
+  assert.deepEqual(lines, [
+    "No.  Track  Artists  Reason",
+    "16   单车   陈奕迅   Semantic match 0.98: Lyrics are in Cantonese, as",
+    "                     confirmed by the song artist Eason Chan and the lyric",
+    "                     snippet.",
+  ]);
+});

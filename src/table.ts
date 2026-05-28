@@ -1,6 +1,7 @@
 type TableColumn<Row> = {
   header: string;
   value: (row: Row) => string;
+  maxWidth?: number;
 };
 
 function isCombiningCodePoint(codePoint: number): boolean {
@@ -44,14 +45,66 @@ function padEndByDisplayWidth(value: string, width: number): string {
   return value + " ".repeat(Math.max(0, width - displayWidth(value)));
 }
 
+function wrapDisplayText(value: string, maxWidth: number): string[] {
+  if (maxWidth <= 0 || displayWidth(value) <= maxWidth) {
+    return [value];
+  }
+
+  if (value.includes(" ")) {
+    const lines: string[] = [];
+    let current = "";
+
+    for (const word of value.split(" ")) {
+      const next = current ? `${current} ${word}` : word;
+      if (current && displayWidth(next) > maxWidth) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+
+    return lines;
+  }
+
+  const lines: string[] = [];
+  let current = "";
+  let currentWidth = 0;
+
+  for (const character of value) {
+    const characterWidth = displayWidth(character);
+    if (currentWidth > 0 && currentWidth + characterWidth > maxWidth) {
+      lines.push(current);
+      current = "";
+      currentWidth = 0;
+    }
+
+    current += character;
+    currentWidth += characterWidth;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
+}
+
 export function formatTable<Row>(
   rows: Row[],
   columns: Array<TableColumn<Row>>,
 ): string[] {
   const widths = columns.map((column) =>
-    Math.max(
-      displayWidth(column.header),
-      ...rows.map((row) => displayWidth(column.value(row))),
+    Math.min(
+      column.maxWidth ?? Number.POSITIVE_INFINITY,
+      Math.max(
+        displayWidth(column.header),
+        ...rows.map((row) => displayWidth(column.value(row))),
+      ),
     ),
   );
 
@@ -61,10 +114,23 @@ export function formatTable<Row>(
       .join("  ")
       .trimEnd();
 
+  const formatRow = (row: Row): string[] => {
+    const wrappedCells = columns.map((column, index) =>
+      wrapDisplayText(column.value(row), widths[index] ?? 0),
+    );
+    const rowHeight = Math.max(...wrappedCells.map((cell) => cell.length));
+
+    return Array.from({ length: rowHeight }, (_, lineIndex) =>
+      formatCells(
+        wrappedCells.map((cell) => {
+          return cell[lineIndex] ?? "";
+        }),
+      ),
+    );
+  };
+
   return [
     formatCells(columns.map((column) => column.header)),
-    ...rows.map((row) =>
-      formatCells(columns.map((column) => column.value(row))),
-    ),
+    ...rows.flatMap((row) => formatRow(row)),
   ];
 }
