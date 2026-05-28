@@ -39,15 +39,15 @@
 方式一：使用 Git 克隆仓库。
 
 ```bash
-git clone https://github.com/Zion-Johnson99/netease-playlist-assistant.git
-cd netease-playlist-assistant
+git clone https://github.com/Zion-Johnson99/Netease-Playlist-Assistant-v1.0.git
+cd Netease-Playlist-Assistant-v1.0
 npm install
 ```
 
 方式二：在 GitHub 页面点击 `Code` -> `Download ZIP`，解压后进入项目目录，再安装依赖。
 
 ```bash
-cd netease-playlist-assistant
+cd Netease-Playlist-Assistant-v1.0
 npm install
 ```
 
@@ -274,15 +274,15 @@ There are two ways to get the project.
 Option 1: clone the repository with Git.
 
 ```bash
-git clone https://github.com/Zion-Johnson99/netease-playlist-assistant.git
-cd netease-playlist-assistant
+git clone https://github.com/Zion-Johnson99/Netease-Playlist-Assistant-v1.0.git
+cd Netease-Playlist-Assistant-v1.0
 npm install
 ```
 
 Option 2: open the GitHub page, click `Code` -> `Download ZIP`, extract it, enter the project directory, then install dependencies.
 
 ```bash
-cd netease-playlist-assistant
+cd Netease-Playlist-Assistant-v1.0
 npm install
 ```
 
