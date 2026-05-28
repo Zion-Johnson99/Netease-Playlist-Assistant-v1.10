@@ -8,9 +8,8 @@ Large playlists get messy quickly. Cantonese tracks, Japanese songs, English slo
 
 It fits requests like these:
 
-- "Move Jay Chou songs from my liked songs into a new playlist"
+- "Move Coldplay songs from my liked songs into a new playlist"
 - "Find Justin Bieber songs in my commute playlist"
-- "Use the same playlist, but replace Jay Chou with Coldplay"
 - "Collect late-night English slow songs"
 - "Pick the first 20 Cantonese songs from a large playlist"
 
@@ -19,7 +18,7 @@ The project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.c
 ## Features
 
 - Plain-language playlist cleanup: describe the source playlist, matching rule, and target playlist in one request. Use `preview` to inspect matches, then `run` to create the playlist.
-- Fast artist and title matching: handles direct requests such as "Jay Chou songs", "Justin Bieber songs", or "replace Jay Chou with Coldplay" through local artist-name and alias matching first.
+- Fast artist and title matching: handles direct requests such as "Coldplay songs" and "Justin Bieber songs" through local artist-name and alias matching first.
 - Language filtering: handles requests such as "Cantonese songs", "Japanese songs", and "English slow songs" by combining track metadata, lyric snippets, and model judgment.
 - Scene and style filtering: supports open-ended descriptions such as "English songs for commuting", "late-night R&B", "running tracks", and "2000s Mandarin pop".
 - Count limits: supports "first 20 tracks" and "pick 10 songs", preserving the original playlist order for the first N matches.
@@ -155,7 +154,7 @@ preview
 Enter a full request when prompted, for example:
 
 ```text
-Find all Jay Chou songs in my liked songs and create a new playlist named Jay Chou Picks
+Find all Coldplay songs in my liked songs and create a new playlist named Coldplay Picks
 ```
 
 Create the playlist after preview:
@@ -173,17 +172,11 @@ Enter the same full request. After the command finishes, check the created playl
 Filter by artist:
 
 ```text
-Find Jay Chou songs in my liked songs and create a playlist named Jay Chou
+Find Coldplay songs in my liked songs and create a playlist named Coldplay
 ```
 
 ```text
 Move Justin Bieber songs from my Commute playlist into Justin Bieber Commute
-```
-
-Replace the filter target:
-
-```text
-Use the Jay Chou playlist, replace Jay Chou with Coldplay, and create a playlist named Coldplay
 ```
 
 Filter by language:
