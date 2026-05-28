@@ -7,6 +7,14 @@ const artistAliases = new Map<string, string[]>([
   ["jb", ["justin bieber", "bieber", "jb"]],
 ]);
 
+function normalizeArtistKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[\s._\-'"‘’“”`´·・•]+/g, "");
+}
+
 export function matchesArtist(
   song: Song,
   artistQuery: string,
@@ -14,21 +22,23 @@ export function matchesArtist(
 ): MatchedSong | null {
   const query = artistQuery.trim().toLowerCase();
   const aliases = artistAliases.get(query) ?? [query];
+  const normalizedAliases = aliases.map((alias) => normalizeArtistKey(alias));
   const artistNames = song.artists
     .map((artist) => artist.name)
     .filter(
       (name): name is string => typeof name === "string" && name.length > 0,
     )
-    .map((name) => name.toLowerCase());
+    .map((name) => normalizeArtistKey(name));
 
-  const matchedAlias = aliases.find((alias) =>
-    artistNames.some((artistName) => artistName.includes(alias.toLowerCase())),
+  const matchedAliasIndex = normalizedAliases.findIndex((alias) =>
+    artistNames.some((artistName) => artistName.includes(alias)),
   );
 
-  if (!matchedAlias) {
+  if (matchedAliasIndex < 0) {
     return null;
   }
 
+  const matchedAlias = aliases[matchedAliasIndex] ?? query;
   return {
     ...song,
     reason: text(

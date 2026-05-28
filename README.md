@@ -86,7 +86,7 @@ DEEPSEEK_BATCH_RETRIES=1
 npm link
 ```
 
-`npm link` 会把本项目的 `cn`、`en`、`login`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
+`npm link` 会把本项目的 `cn`、`en`、`login`、`list`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
 
 设置中文环境：
 
@@ -106,6 +106,14 @@ login
 
 命令会在终端显示二维码。使用网易云音乐手机 App 扫码确认后，登录状态会写入 `.netease-assistant/cookie.txt`。
 同一台电脑、同一个项目目录下，后续命令会直接复用这份本地登录状态，通常不需要反复扫码；本地 Cookie 失效、被删除或更换环境时，再重新登录一次即可。
+
+查看当前账号的全部歌单：
+
+```bash
+list
+```
+
+`list` 会按表格列出歌单序号、ID、歌曲数和歌单名，包含“我喜欢的音乐”。`cn` / `en` 只影响界面文案，歌单名称按网易云返回原文显示。
 
 可选：切换内置 DeepSeek 模型：
 
@@ -286,7 +294,7 @@ Register local commands:
 npm link
 ```
 
-`npm link` registers this project's `cn`, `en`, `login`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
+`npm link` registers this project's `cn`, `en`, `login`, `list`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
 
 Set English as the active language:
 
@@ -306,6 +314,14 @@ login
 
 The command prints a QR code in the terminal. Scan it with the NetEase Cloud Music mobile app. The login cookie is stored at `.netease-assistant/cookie.txt`.
 On the same computer and in the same project directory, later commands reuse this local login state directly, so repeated QR scans are usually unnecessary. Log in again only when the local cookie expires, is removed, or the environment changes.
+
+List every playlist for the current account:
+
+```bash
+list
+```
+
+`list` prints an aligned table with playlist number, ID, track count, and playlist name, including "Liked Songs". `cn` / `en` only changes interface labels; playlist names stay in the original text returned by NetEase.
 
 Optional: switch built-in DeepSeek models:
 

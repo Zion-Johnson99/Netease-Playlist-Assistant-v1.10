@@ -26,6 +26,11 @@ test("matches artist aliases for Justin Bieber", () => {
   assert.equal(matched?.id, 1);
 });
 
+test("matches artist names without separators", () => {
+  const matched = matchesArtist(justinSong, "justinbieber");
+  assert.equal(matched?.id, 1);
+});
+
 test("filters songs by artist task", async () => {
   const task: PlaylistTask = {
     sourcePlaylistName: "A",

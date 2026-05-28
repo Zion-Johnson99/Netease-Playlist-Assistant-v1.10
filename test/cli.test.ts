@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createInteractiveIntro, validateInteractiveArgs } from "../src/cli.js";
+import {
+  createInteractiveIntro,
+  formatMatchedSongsTable,
+  formatPlaylistTable,
+  validateInteractiveArgs,
+  validateNoArgs,
+} from "../src/cli.js";
 
 test("creates preview interactive intro", () => {
   const intro = createInteractiveIntro("preview");
@@ -45,4 +51,55 @@ test("rejects command arguments in English interactive mode", () => {
 
 test("accepts empty command arguments in interactive mode", () => {
   assert.doesNotThrow(() => validateInteractiveArgs("run", []));
+});
+
+test("rejects arguments for list command", () => {
+  assert.throws(() => validateNoArgs("list", ["extra"]), /list 不需要参数/);
+});
+
+test("formats matched songs as one-line aligned table", () => {
+  const lines = formatMatchedSongsTable([
+    {
+      id: 1,
+      name: "Forever Yours",
+      artists: [{ name: "J. Brown" }],
+      reason: "语义匹配 0.90：浪漫婚礼主题",
+    },
+    {
+      id: 2,
+      name: "好天气",
+      artists: [{ name: "韦礼安" }],
+      reason: "语义匹配 0.90：旋律轻快温暖",
+    },
+  ]);
+
+  assert.deepEqual(lines, [
+    "序号  歌曲           歌手      理由",
+    "01    Forever Yours  J. Brown  语义匹配 0.90：浪漫婚礼主题",
+    "02    好天气         韦礼安    语义匹配 0.90：旋律轻快温暖",
+  ]);
+});
+
+test("formats playlists without translating playlist names", () => {
+  const lines = formatPlaylistTable(
+    [
+      {
+        id: 1,
+        name: "我喜欢的音乐",
+        trackCount: 20,
+      },
+      {
+        id: 2,
+        name: "City Pop 夜行",
+        trackCount: 8,
+      },
+    ],
+    "en",
+  );
+
+  assert.deepEqual(lines, [
+    "No.  ID  Tracks  Playlist",
+    "01   1   20      我喜欢的音乐",
+    "02   2   8       City Pop 夜行",
+  ]);
 });

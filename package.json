@@ -7,12 +7,14 @@
     "cn": "./bin/cn.js",
     "en": "./bin/en.js",
     "login": "./bin/login.js",
+    "list": "./bin/list.js",
     "model": "./bin/model.js",
     "preview": "./bin/preview.js",
     "run": "./bin/run.js"
   },
   "scripts": {
     "login": "tsx src/cli.ts login",
+    "list": "tsx src/cli.ts list",
     "model": "tsx src/cli.ts model",
     "run": "tsx src/cli.ts run",
     "preview": "tsx src/cli.ts preview",

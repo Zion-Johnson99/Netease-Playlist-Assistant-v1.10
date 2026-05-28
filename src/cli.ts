@@ -26,8 +26,9 @@ import {
   listOwnPlaylists,
   loginByQrCode,
 } from "./netease.js";
-import { PlaylistTask } from "./types.js";
+import { MatchedSong, PlaylistSummary, PlaylistTask, Song } from "./types.js";
 import { createDeepseekSemanticMatcher } from "./semantic.js";
+import { formatTable } from "./table.js";
 
 type Mode = "execute" | "preview";
 
@@ -37,6 +38,66 @@ type TerminalProgress = {
   elapsed: () => string;
   warn: (message: string) => void;
 };
+
+function getArtistsDisplay(song: Song, locale: AppLocale): string {
+  return (
+    song.artists
+      .map((artist) => artist.name)
+      .filter((name) => typeof name === "string" && name.length > 0)
+      .join("/") || text(locale, "未知歌手", "Unknown artist")
+  );
+}
+
+export function formatMatchedSongsTable(
+  songs: MatchedSong[],
+  locale: AppLocale = "cn",
+): string[] {
+  const indexWidth = String(songs.length).length;
+  return formatTable(
+    songs.map((song, index) => ({
+      index: String(index + 1).padStart(Math.max(2, indexWidth), "0"),
+      name: song.name,
+      artists: getArtistsDisplay(song, locale),
+      reason: song.reason,
+    })),
+    [
+      { header: text(locale, "序号", "No."), value: (row) => row.index },
+      { header: text(locale, "歌曲", "Track"), value: (row) => row.name },
+      {
+        header: text(locale, "歌手", "Artists"),
+        value: (row) => row.artists,
+      },
+      { header: text(locale, "理由", "Reason"), value: (row) => row.reason },
+    ],
+  );
+}
+
+export function formatPlaylistTable(
+  playlists: PlaylistSummary[],
+  locale: AppLocale = "cn",
+): string[] {
+  const indexWidth = String(playlists.length).length;
+  return formatTable(
+    playlists.map((playlist, index) => ({
+      index: String(index + 1).padStart(Math.max(2, indexWidth), "0"),
+      id: String(playlist.id),
+      trackCount: String(playlist.trackCount),
+      name: playlist.name,
+    })),
+    [
+      { header: text(locale, "序号", "No."), value: (row) => row.index },
+      { header: "ID", value: (row) => row.id },
+      {
+        header: text(locale, "歌曲数", "Tracks"),
+        value: (row) => row.trackCount,
+      },
+      {
+        header: text(locale, "歌单名", "Playlist"),
+        value: (row) => row.name,
+      },
+    ],
+  );
+}
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -111,6 +172,31 @@ async function runTask(instruction: string, mode: Mode): Promise<void> {
   );
 
   await executeStructuredTask(task, cookie, mode, playlists);
+}
+
+async function listPlaylists(): Promise<void> {
+  const config = loadConfig();
+  const cookie = readCookie(config);
+  const profile = await getLoginProfile(cookie, config.locale);
+  console.log(
+    text(
+      config.locale,
+      `当前账号：${profile.nickname ?? profile.userId}`,
+      `Current account: ${profile.nickname ?? profile.userId}`,
+    ),
+  );
+
+  const playlists = await listOwnPlaylists(cookie, profile);
+  console.log(
+    text(
+      config.locale,
+      `歌单列表：共 ${playlists.length} 个`,
+      `Playlists: ${playlists.length} total`,
+    ),
+  );
+  for (const line of formatPlaylistTable(playlists, config.locale)) {
+    console.log(line);
+  }
 }
 
 async function executeStructuredTask(
@@ -275,8 +361,9 @@ async function executeStructuredTask(
       `Matched tracks: ${matched.length}`,
     ),
   );
-  for (const song of matched) {
-    console.log(`- ${getSongDisplay(song, config.locale)} | ${song.reason}`);
+  console.log("");
+  for (const line of formatMatchedSongsTable(matched, config.locale)) {
+    console.log(line);
   }
 
   if (mode === "preview") {
@@ -405,6 +492,22 @@ export function validateInteractiveArgs(
   }
 }
 
+export function validateNoArgs(
+  command: string,
+  args: string[],
+  locale: AppLocale = "cn",
+): void {
+  if (args.length > 0) {
+    throw new Error(
+      text(
+        locale,
+        `${command} 不需要参数`,
+        `${command} does not accept arguments.`,
+      ),
+    );
+  }
+}
+
 async function promptInstruction(
   mode: Mode,
   locale: AppLocale,
@@ -452,6 +555,7 @@ function createUsage(locale: AppLocale): string {
   cn
   en
   login
+  list
   model -- deepseek-v4-flash
   model -- deepseek-v4-pro
   preview
@@ -460,6 +564,7 @@ function createUsage(locale: AppLocale): string {
   cn
   en
   login
+  list
   model -- deepseek-v4-flash
   model -- deepseek-v4-pro
   preview
@@ -489,6 +594,12 @@ async function main(): Promise<void> {
 
   if (command === "login") {
     await loginByQrCode(locale);
+    return;
+  }
+
+  if (command === "list") {
+    validateNoArgs("list", args, locale);
+    await listPlaylists();
     return;
   }
 
