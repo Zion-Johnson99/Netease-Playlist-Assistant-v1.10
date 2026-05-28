@@ -97,6 +97,7 @@ login
 ```
 
 命令会在终端显示二维码。使用网易云音乐手机 App 扫码确认后，登录状态会写入 `.netease-assistant/cookie.txt`。
+同一台电脑、同一个项目目录下，后续命令会直接复用这份本地登录状态，通常不需要反复扫码；本地 Cookie 失效、被删除或更换环境时，再重新登录一次即可。
 
 可选：切换内置 DeepSeek 模型：
 
@@ -285,6 +286,7 @@ login
 ```
 
 The command prints a QR code in the terminal. Scan it with the NetEase Cloud Music mobile app. The login cookie is stored at `.netease-assistant/cookie.txt`.
+On the same computer and in the same project directory, later commands reuse this local login state directly, so repeated QR scans are usually unnecessary. Log in again only when the local cookie expires, is removed, or the environment changes.
 
 Optional: switch built-in DeepSeek models:
 
