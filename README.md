@@ -1,4 +1,4 @@
-# Netease Playlist Assistant
+# Netease Playlist Assistant v1.0
 
 [中文](#中文) | [English](#english)
 
