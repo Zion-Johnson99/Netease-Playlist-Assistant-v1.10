@@ -14,7 +14,10 @@ function createTestConfig(): AppConfig {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-semantic-"));
   return {
     dataDir,
+    localeDataDir: path.join(dataDir, "cn"),
     cookiePath: path.join(dataDir, "cookie.txt"),
+    appConfigPath: path.join(dataDir, "config.json"),
+    locale: "cn",
     deepseekApiKey: "test-key",
     deepseekModel: "test-model",
     deepseekBaseUrl: "https://example.test",
@@ -43,7 +46,7 @@ const song: Song = {
 test("stores semantic metadata and decisions", () => {
   const config = createTestConfig();
   const cache = new SemanticCache(config);
-  const key = createSemanticDecisionKey(task, song, "语种：粤语");
+  const key = createSemanticDecisionKey("cn", task, song, "语种：粤语");
 
   cache.setMetadata(song.id, "语种：粤语");
   cache.setLyric(song.id, "你喺边度，我唔知点解会咁");
@@ -61,9 +64,38 @@ test("stores semantic metadata and decisions", () => {
   assert.equal(nextCache.getDecision(key)?.matched, true);
 });
 
+test("stores semantic cache under locale data directory", () => {
+  const config = createTestConfig();
+  const cache = new SemanticCache(config);
+
+  cache.setMetadata(song.id, "语种：粤语");
+  cache.save();
+
+  assert.equal(
+    fs.existsSync(path.join(config.localeDataDir, "semantic-cache.json")),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(path.join(config.dataDir, "semantic-cache.json")),
+    false,
+  );
+});
+
 test("changes semantic decision key when metadata changes", () => {
-  const cantoneseKey = createSemanticDecisionKey(task, song, "语种：粤语");
-  const mandarinKey = createSemanticDecisionKey(task, song, "语种：国语");
+  const cantoneseKey = createSemanticDecisionKey(
+    "cn",
+    task,
+    song,
+    "语种：粤语",
+  );
+  const mandarinKey = createSemanticDecisionKey("cn", task, song, "语种：国语");
 
   assert.notEqual(cantoneseKey, mandarinKey);
+});
+
+test("changes semantic decision key when locale changes", () => {
+  const cnKey = createSemanticDecisionKey("cn", task, song, "语种：粤语");
+  const enKey = createSemanticDecisionKey("en", task, song, "语种：粤语");
+
+  assert.notEqual(cnKey, enKey);
 });

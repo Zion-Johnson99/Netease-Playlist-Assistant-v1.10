@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import qrcode from "qrcode-terminal";
-import { readCookie, writeCookie } from "./config.js";
+import { AppLocale, readCookie, readLocale, writeCookie } from "./config.js";
+import { text } from "./locale.js";
 import { PlaylistSummary, Song } from "./types.js";
 
 const require = createRequire(import.meta.url);
@@ -205,8 +206,15 @@ async function callApi<T extends NcmResponse>(
   params: Record<string, unknown>,
 ): Promise<T> {
   const fn = ncm[method];
+  const locale = readLocale();
   if (!fn) {
-    throw new Error(`NeteaseCloudMusicApi 缺少方法：${method}`);
+    throw new Error(
+      text(
+        locale,
+        `NeteaseCloudMusicApi 缺少方法：${method}`,
+        `NeteaseCloudMusicApi is missing method: ${method}`,
+      ),
+    );
   }
 
   const policy = apiPolicies[method];
@@ -229,18 +237,27 @@ async function callApi<T extends NcmResponse>(
       const delayMs = policy?.retryDelaysMs[attempt];
       if (delayMs === undefined) {
         throw new Error(
-          `网易云接口被限流：${method}，${summarizeRateLimit(response)}`,
+          text(
+            locale,
+            `网易云接口被限流：${method}，${summarizeRateLimit(response)}`,
+            `NetEase API was rate limited: ${method}, ${summarizeRateLimit(response)}`,
+          ),
         );
       }
 
       console.warn(
-        `网易云接口限流：${method}，${delayMs / 1000}s 后重试（${attempt + 1}/${retryCount}）`,
+        text(
+          locale,
+          `网易云接口限流：${method}，${delayMs / 1000}s 后重试（${attempt + 1}/${retryCount}）`,
+          `NetEase API rate limited: ${method}. Retrying after ${delayMs / 1000}s (${attempt + 1}/${retryCount}).`,
+        ),
       );
       await sleep(delayMs);
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.startsWith("网易云接口被限流")
+        (error.message.startsWith("网易云接口被限流") ||
+          error.message.startsWith("NetEase API was rate limited"))
       ) {
         throw error;
       }
@@ -248,22 +265,39 @@ async function callApi<T extends NcmResponse>(
       const delayMs = policy?.retryDelaysMs[attempt];
       if (delayMs !== undefined && isRateLimited(error)) {
         console.warn(
-          `网易云接口限流：${method}，${delayMs / 1000}s 后重试（${attempt + 1}/${retryCount}）`,
+          text(
+            locale,
+            `网易云接口限流：${method}，${delayMs / 1000}s 后重试（${attempt + 1}/${retryCount}）`,
+            `NetEase API rate limited: ${method}. Retrying after ${delayMs / 1000}s (${attempt + 1}/${retryCount}).`,
+          ),
         );
         await sleep(delayMs);
         continue;
       }
 
-      throw new Error(`网易云接口调用失败：${method}`, { cause: error });
+      throw new Error(
+        text(
+          locale,
+          `网易云接口调用失败：${method}`,
+          `NetEase API call failed: ${method}`,
+        ),
+        { cause: error },
+      );
     }
   }
 }
 
-export async function loginByQrCode(): Promise<void> {
+export async function loginByQrCode(locale: AppLocale = "cn"): Promise<void> {
   const keyResponse = await callApi("login_qr_key", {});
   const key = keyResponse.body.data as { unikey?: string };
   if (!key.unikey) {
-    throw new Error("网易云未返回二维码登录 key");
+    throw new Error(
+      text(
+        locale,
+        "网易云未返回二维码登录 key",
+        "NetEase did not return a QR login key.",
+      ),
+    );
   }
 
   const qrResponse = await callApi("login_qr_create", {
@@ -271,10 +305,22 @@ export async function loginByQrCode(): Promise<void> {
   });
   const qrData = qrResponse.body.data as { qrurl?: string };
   if (!qrData.qrurl) {
-    throw new Error("网易云未返回二维码链接");
+    throw new Error(
+      text(
+        locale,
+        "网易云未返回二维码链接",
+        "NetEase did not return a QR code URL.",
+      ),
+    );
   }
 
-  console.log("请用网易云音乐手机 App 扫描二维码：");
+  console.log(
+    text(
+      locale,
+      "请用网易云音乐手机 App 扫描二维码：",
+      "Scan the QR code with the NetEase Cloud Music mobile app:",
+    ),
+  );
   qrcode.generate(qrData.qrurl, { small: true });
 
   for (let attempt = 0; attempt < 90; attempt += 1) {
@@ -287,30 +333,61 @@ export async function loginByQrCode(): Promise<void> {
     if (code === 803) {
       const cookie = checkResponse.body.cookie;
       if (typeof cookie !== "string" || !cookie) {
-        throw new Error("扫码成功，但网易云未返回 Cookie");
+        throw new Error(
+          text(
+            locale,
+            "扫码成功，但网易云未返回 Cookie",
+            "Scan succeeded, but NetEase did not return a cookie.",
+          ),
+        );
       }
       writeCookie(cookie);
-      const profile = await getLoginProfile(cookie);
-      console.log(`登录成功：${profile.nickname ?? profile.userId}`);
+      const profile = await getLoginProfile(cookie, locale);
+      console.log(
+        text(
+          locale,
+          `登录成功：${profile.nickname ?? profile.userId}`,
+          `Login successful: ${profile.nickname ?? profile.userId}`,
+        ),
+      );
       return;
     }
 
     if (code === 800) {
-      throw new Error("二维码已过期，请重新运行 npm run login");
+      throw new Error(
+        text(
+          locale,
+          "二维码已过期，请重新运行 login",
+          "The QR code expired. Run login again.",
+        ),
+      );
     }
 
     if (code === 802) {
-      console.log("扫码已确认，等待网易云完成登录...");
+      console.log(
+        text(
+          locale,
+          "扫码已确认，等待网易云完成登录...",
+          "Scan confirmed. Waiting for NetEase to finish login...",
+        ),
+      );
     }
 
     await sleep(2000);
   }
 
-  throw new Error("等待扫码超时，请重新运行 npm run login");
+  throw new Error(
+    text(
+      locale,
+      "等待扫码超时，请重新运行 login",
+      "Timed out waiting for QR scan. Run login again.",
+    ),
+  );
 }
 
 export async function getLoginProfile(
   cookie = readCookie(),
+  locale: AppLocale = "cn",
 ): Promise<LoginProfile> {
   const response = await callApi("login_status", {
     cookie,
@@ -318,7 +395,13 @@ export async function getLoginProfile(
   });
   const data = response.body.data as { profile?: LoginProfile };
   if (!data?.profile?.userId) {
-    throw new Error("登录状态无效，请重新运行 npm run login");
+    throw new Error(
+      text(
+        locale,
+        "登录状态无效，请重新运行 login",
+        "Login state is invalid. Run login again.",
+      ),
+    );
   }
   return data.profile;
 }
@@ -358,13 +441,20 @@ export async function listOwnPlaylists(
 export function findPlaylistByName(
   playlists: PlaylistSummary[],
   name: string,
+  locale: AppLocale = "cn",
 ): PlaylistSummary {
   const exact = playlists.filter((playlist) => playlist.name === name);
   if (exact.length === 1) {
     return exact[0];
   }
   if (exact.length > 1) {
-    throw new Error(`找到多个同名歌单：${name}`);
+    throw new Error(
+      text(
+        locale,
+        `找到多个同名歌单：${name}`,
+        `Found multiple playlists with the same name: ${name}`,
+      ),
+    );
   }
 
   const scored = playlists
@@ -383,7 +473,11 @@ export function findPlaylistByName(
     }
 
     throw new Error(
-      `找到多个相近歌单：${tied.map((item) => item.playlist.name).join("、")}`,
+      text(
+        locale,
+        `找到多个相近歌单：${tied.map((item) => item.playlist.name).join("、")}`,
+        `Found multiple similar playlists: ${tied.map((item) => item.playlist.name).join(", ")}`,
+      ),
     );
   }
 
@@ -391,7 +485,13 @@ export function findPlaylistByName(
     .slice(0, 20)
     .map((playlist) => playlist.name)
     .join("、");
-  throw new Error(`未找到歌单：${name}。当前可见歌单示例：${visibleNames}`);
+  throw new Error(
+    text(
+      locale,
+      `未找到歌单：${name}。当前可见歌单示例：${visibleNames}`,
+      `Playlist not found: ${name}. Visible playlist examples: ${visibleNames}`,
+    ),
+  );
 }
 
 function normalizePlaylistName(value: string): string {
@@ -501,6 +601,7 @@ export async function getSongUgcSummary(
 export async function createPlaylist(
   name: string,
   cookie = readCookie(),
+  locale: AppLocale = "cn",
 ): Promise<PlaylistSummary> {
   const response = await callApi("playlist_create", {
     name,
@@ -511,7 +612,13 @@ export async function createPlaylist(
 
   const playlist = response.body.playlist as RawPlaylist | undefined;
   if (!playlist?.id) {
-    throw new Error(`创建歌单失败：${JSON.stringify(response.body)}`);
+    throw new Error(
+      text(
+        locale,
+        `创建歌单失败：${JSON.stringify(response.body)}`,
+        `Failed to create playlist: ${JSON.stringify(response.body)}`,
+      ),
+    );
   }
 
   return toPlaylist(playlist);
@@ -521,6 +628,7 @@ export async function addSongsToPlaylist(
   playlistId: number,
   songIds: number[],
   cookie = readCookie(),
+  locale: AppLocale = "cn",
 ): Promise<void> {
   const chunkSize = 200;
   for (let index = 0; index < songIds.length; index += chunkSize) {
@@ -536,16 +644,22 @@ export async function addSongsToPlaylist(
       response.body.code ??
       (response.body.body as { code?: unknown } | undefined)?.code;
     if (code !== 200) {
-      throw new Error(`添加歌曲失败：${JSON.stringify(response.body)}`);
+      throw new Error(
+        text(
+          locale,
+          `添加歌曲失败：${JSON.stringify(response.body)}`,
+          `Failed to add tracks: ${JSON.stringify(response.body)}`,
+        ),
+      );
     }
   }
 }
 
-export function getSongDisplay(song: Song): string {
+export function getSongDisplay(song: Song, locale: AppLocale = "cn"): string {
   const artists =
     song.artists
       .map((artist) => artist.name)
       .filter((name) => typeof name === "string" && name.length > 0)
-      .join("/") || "未知歌手";
+      .join("/") || text(locale, "未知歌手", "Unknown artist");
   return `${song.name} - ${artists}`;
 }

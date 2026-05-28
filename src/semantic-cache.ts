@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { AppConfig, ensureDataDir } from "./config.js";
+import { AppConfig, AppLocale, ensureDataDir } from "./config.js";
 import { PlaylistTask, Song } from "./types.js";
 
 const cacheVersion = 2;
@@ -36,7 +36,7 @@ function createEmptyCache(): SemanticCacheFile {
 }
 
 function getCachePath(config: AppConfig): string {
-  return path.join(config.dataDir, "semantic-cache.json");
+  return path.join(config.localeDataDir, "semantic-cache.json");
 }
 
 function hashText(text: string): string {
@@ -53,12 +53,14 @@ function getSongIdentityText(song: Song): string {
 }
 
 export function createSemanticDecisionKey(
+  locale: AppLocale,
   task: PlaylistTask,
   song: Song,
   metadataText: string,
 ): string {
   return hashText(
     JSON.stringify({
+      locale,
       filter: task.filter,
       song: getSongIdentityText(song),
       metadataHash: hashText(metadataText),

@@ -1,9 +1,18 @@
 import readline from "node:readline";
 import { createInterface } from "node:readline/promises";
 import { pathToFileURL } from "node:url";
-import { loadConfig, readCookie, setDeepseekModel } from "./config.js";
+import {
+  AppLocale,
+  isSupportedLocale,
+  loadConfig,
+  readCookie,
+  readLocale,
+  setDeepseekModel,
+  setLocale,
+} from "./config.js";
 import { parseInstruction } from "./deepseek.js";
 import { filterSongs } from "./filter.js";
+import { localeDisplayName, text } from "./locale.js";
 import { readMatchingPreviewCache, savePreviewCache } from "./preview-cache.js";
 import {
   addSongsToPlaylist,
@@ -54,7 +63,12 @@ function createTerminalProgress(): TerminalProgress {
   };
 
   const render = (message: string): void => {
-    const singleLine = `${message}，耗时 ${elapsed()}`.replace(/\r?\n/g, " ");
+    const locale = readLocale();
+    const singleLine = text(
+      locale,
+      `${message}，耗时 ${elapsed()}`,
+      `${message}, elapsed ${elapsed()}`,
+    ).replace(/\r?\n/g, " ");
     if (!process.stdout.isTTY) {
       console.log(singleLine);
       active = false;
@@ -81,8 +95,14 @@ function createTerminalProgress(): TerminalProgress {
 async function runTask(instruction: string, mode: Mode): Promise<void> {
   const config = loadConfig();
   const cookie = readCookie(config);
-  const profile = await getLoginProfile(cookie);
-  console.log(`当前账号：${profile.nickname ?? profile.userId}`);
+  const profile = await getLoginProfile(cookie, config.locale);
+  console.log(
+    text(
+      config.locale,
+      `当前账号：${profile.nickname ?? profile.userId}`,
+      `Current account: ${profile.nickname ?? profile.userId}`,
+    ),
+  );
   const playlists = await listOwnPlaylists(cookie, profile);
   const task = await parseInstruction(
     instruction,
@@ -100,36 +120,71 @@ async function executeStructuredTask(
   playlists: Awaited<ReturnType<typeof listOwnPlaylists>>,
 ): Promise<void> {
   const config = loadConfig();
-  const source = findPlaylistByName(playlists, task.sourcePlaylistName);
+  const source = findPlaylistByName(
+    playlists,
+    task.sourcePlaylistName,
+    config.locale,
+  );
   const existingTarget = playlists.find(
     (playlist) => playlist.name === task.targetPlaylistName,
   );
   if (existingTarget) {
-    throw new Error(`目标歌单已存在：${task.targetPlaylistName}`);
+    throw new Error(
+      text(
+        config.locale,
+        `目标歌单已存在：${task.targetPlaylistName}`,
+        `Target playlist already exists: ${task.targetPlaylistName}`,
+      ),
+    );
   }
 
   if (mode === "execute") {
     const previewCache = readMatchingPreviewCache(config, task, source.id);
     if (previewCache && previewCache.matchedSongs.length > 0) {
       console.log(
-        `使用上次预览结果：${previewCache.matchedSongs.length} 首，预览时间：${previewCache.createdAt}`,
+        text(
+          config.locale,
+          `使用上次预览结果：${previewCache.matchedSongs.length} 首，预览时间：${previewCache.createdAt}`,
+          `Using last preview result: ${previewCache.matchedSongs.length} tracks, preview time: ${previewCache.createdAt}`,
+        ),
       );
-      const target = await createPlaylist(task.targetPlaylistName, cookie);
+      const target = await createPlaylist(
+        task.targetPlaylistName,
+        cookie,
+        config.locale,
+      );
       await addSongsToPlaylist(
         target.id,
         previewCache.matchedSongs.map((song) => song.id),
         cookie,
+        config.locale,
       );
       console.log(
-        `已创建歌单并添加歌曲：${target.name}，共 ${previewCache.matchedSongs.length} 首`,
+        text(
+          config.locale,
+          `已创建歌单并添加歌曲：${target.name}，共 ${previewCache.matchedSongs.length} 首`,
+          `Created playlist and added tracks: ${target.name}, ${previewCache.matchedSongs.length} total`,
+        ),
       );
       return;
     }
   }
 
-  console.log(`源歌单：${source.name}，歌曲数：${source.trackCount}`);
+  console.log(
+    text(
+      config.locale,
+      `源歌单：${source.name}，歌曲数：${source.trackCount}`,
+      `Source playlist: ${source.name}, tracks: ${source.trackCount}`,
+    ),
+  );
   const songs = await getPlaylistSongs(source.id, cookie);
-  console.log(`已读取歌曲：${songs.length}`);
+  console.log(
+    text(
+      config.locale,
+      `已读取歌曲：${songs.length}`,
+      `Read tracks: ${songs.length}`,
+    ),
+  );
   const progress = createTerminalProgress();
 
   const lyricFailures: Array<{
@@ -144,6 +199,7 @@ async function executeStructuredTask(
       task,
       (songId) => getLyric(songId, cookie),
       {
+        locale: config.locale,
         onProgress:
           task.filter.type !== "artist"
             ? (event) => {
@@ -154,14 +210,18 @@ async function executeStructuredTask(
 
                 const phaseLabel =
                   event.phase === "lyrics"
-                    ? "读取歌词"
+                    ? text(config.locale, "读取歌词", "Reading lyrics")
                     : event.phase === "metadata"
-                      ? "读取元数据"
+                      ? text(config.locale, "读取元数据", "Reading metadata")
                       : event.phase === "semantic"
-                        ? "语义判定"
-                        : "筛选";
+                        ? text(config.locale, "语义判定", "Semantic judging")
+                        : text(config.locale, "筛选", "Filtering");
                 progress.update(
-                  `${phaseLabel}进度：${event.processed}/${event.total}，已匹配：${event.matched}`,
+                  text(
+                    config.locale,
+                    `${phaseLabel}进度：${event.processed}/${event.total}，已匹配：${event.matched}`,
+                    `${phaseLabel} progress: ${event.processed}/${event.total}, matched: ${event.matched}`,
+                  ),
                 );
               }
             : undefined,
@@ -171,7 +231,7 @@ async function executeStructuredTask(
         onLyricError: ({ song, error }) => {
           lyricFailures.push({
             songId: song.id,
-            display: getSongDisplay(song),
+            display: getSongDisplay(song, config.locale),
             message: getErrorMessage(error),
           });
         },
@@ -183,7 +243,13 @@ async function executeStructuredTask(
   }
 
   if (lyricFailures.length > 0) {
-    progress.warn(`歌词读取失败：${lyricFailures.length} 首，已跳过歌词判定`);
+    progress.warn(
+      text(
+        config.locale,
+        `歌词读取失败：${lyricFailures.length} 首，已跳过歌词判定`,
+        `Failed to read lyrics for ${lyricFailures.length} tracks. Lyric judging was skipped for them.`,
+      ),
+    );
     for (const failure of lyricFailures) {
       progress.warn(
         `- ${failure.display} (${failure.songId}) | ${failure.message}`,
@@ -192,13 +258,25 @@ async function executeStructuredTask(
   }
 
   if (matched.length === 0) {
-    console.log("没有找到符合条件的歌曲");
+    console.log(
+      text(
+        config.locale,
+        "没有找到符合条件的歌曲",
+        "No matching tracks found.",
+      ),
+    );
     return;
   }
 
-  console.log(`匹配歌曲：${matched.length}`);
+  console.log(
+    text(
+      config.locale,
+      `匹配歌曲：${matched.length}`,
+      `Matched tracks: ${matched.length}`,
+    ),
+  );
   for (const song of matched) {
-    console.log(`- ${getSongDisplay(song)} | ${song.reason}`);
+    console.log(`- ${getSongDisplay(song, config.locale)} | ${song.reason}`);
   }
 
   if (mode === "preview") {
@@ -209,29 +287,80 @@ async function executeStructuredTask(
       filter: task.filter,
       matchedSongs: matched,
     });
-    console.log("预览完成，未创建歌单");
+    console.log(
+      text(
+        config.locale,
+        "预览完成，未创建歌单",
+        "Preview complete. No playlist was created.",
+      ),
+    );
     return;
   }
 
-  const target = await createPlaylist(task.targetPlaylistName, cookie);
+  const target = await createPlaylist(
+    task.targetPlaylistName,
+    cookie,
+    config.locale,
+  );
   await addSongsToPlaylist(
     target.id,
     matched.map((song) => song.id),
     cookie,
+    config.locale,
   );
 
-  console.log(`已创建歌单并添加歌曲：${target.name}，共 ${matched.length} 首`);
+  console.log(
+    text(
+      config.locale,
+      `已创建歌单并添加歌曲：${target.name}，共 ${matched.length} 首`,
+      `Created playlist and added tracks: ${target.name}, ${matched.length} total`,
+    ),
+  );
 }
 
-function getInstruction(args: string[]): string {
+function getInstruction(args: string[], locale: AppLocale): string {
   const instruction = args.join(" ").trim();
   if (!instruction) {
-    throw new Error("请提供自然语言指令");
+    throw new Error(
+      text(locale, "请提供自然语言指令", "Provide a natural language request."),
+    );
   }
   return instruction;
 }
 
-export function createInteractiveIntro(mode: Mode): string {
+export function createInteractiveIntro(
+  mode: Mode,
+  locale: AppLocale = "cn",
+): string {
+  if (locale === "en") {
+    if (mode === "preview") {
+      return [
+        "┌─ Netease Playlist Assistant",
+        "│  Mode: preview",
+        "│",
+        "│  Describe your playlist cleanup request",
+        "│  Include the source playlist, filter, and new playlist name",
+        "│",
+        "│  Example:",
+        "│  Find all Cantonese songs in playlist xx and put them in a new playlist named xx",
+        "└─",
+      ].join("\n");
+    }
+
+    return [
+      "┌─ Netease Playlist Assistant",
+      "│  Mode: create playlist",
+      "│",
+      "│  Describe your playlist cleanup request",
+      "│  Use the same request you previewed",
+      "│  The tool will reuse a matching recent preview result first",
+      "│",
+      "│  Example:",
+      "│  Find all Cantonese songs in playlist xx and put them in a new playlist named xx",
+      "└─",
+    ].join("\n");
+  }
+
   if (mode === "preview") {
     return [
       "┌─ Netease Playlist Assistant",
@@ -260,25 +389,38 @@ export function createInteractiveIntro(mode: Mode): string {
   ].join("\n");
 }
 
-export function validateInteractiveArgs(command: string, args: string[]): void {
+export function validateInteractiveArgs(
+  command: string,
+  args: string[],
+  locale: AppLocale = "cn",
+): void {
   if (args.length > 0) {
     throw new Error(
-      `${command} 已进入对话输入模式，请启动后在对话框内输入需求`,
+      text(
+        locale,
+        `${command} 已进入对话输入模式，请启动后在对话框内输入需求`,
+        `${command} uses interactive input mode. Start it first, then enter your request in the prompt.`,
+      ),
     );
   }
 }
 
-async function promptInstruction(mode: Mode): Promise<string> {
-  console.log(createInteractiveIntro(mode));
+async function promptInstruction(
+  mode: Mode,
+  locale: AppLocale,
+): Promise<string> {
+  console.log(createInteractiveIntro(mode, locale));
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
   });
 
   try {
-    const instruction = (await rl.question("需求 > ")).trim();
+    const instruction = (
+      await rl.question(text(locale, "需求 > ", "Request > "))
+    ).trim();
     if (!instruction) {
-      throw new Error("需求不能为空");
+      throw new Error(text(locale, "需求不能为空", "Request cannot be empty."));
     }
     return instruction;
   } finally {
@@ -286,50 +428,96 @@ async function promptInstruction(mode: Mode): Promise<string> {
   }
 }
 
-function getModelName(args: string[]): string {
+function getModelName(args: string[], locale: AppLocale): string {
   const model = args
     .filter((arg) => arg !== "--")
     .join(" ")
     .trim();
   if (!model) {
-    throw new Error("请提供模型名：deepseek-v4-pro 或 deepseek-v4-flash");
+    throw new Error(
+      text(
+        locale,
+        "请提供模型名：deepseek-v4-pro 或 deepseek-v4-flash",
+        "Provide a model name: deepseek-v4-pro or deepseek-v4-flash",
+      ),
+    );
   }
   return model;
 }
 
+function createUsage(locale: AppLocale): string {
+  return text(
+    locale,
+    `用法：
+  cn
+  en
+  login
+  model -- deepseek-v4-flash
+  model -- deepseek-v4-pro
+  preview
+  run`,
+    `Usage:
+  cn
+  en
+  login
+  model -- deepseek-v4-flash
+  model -- deepseek-v4-pro
+  preview
+  run`,
+  );
+}
+
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
+  const locale = readLocale();
+
+  if (command === "locale") {
+    const nextLocale = args[0]?.trim().toLowerCase();
+    if (!nextLocale || !isSupportedLocale(nextLocale)) {
+      throw new Error("语言只支持 cn 或 en");
+    }
+    setLocale(nextLocale);
+    console.log(
+      text(
+        nextLocale,
+        `已切换语言：${localeDisplayName(nextLocale)}`,
+        `Language switched: ${localeDisplayName(nextLocale)}`,
+      ),
+    );
+    return;
+  }
 
   if (command === "login") {
-    await loginByQrCode();
+    await loginByQrCode(locale);
     return;
   }
 
   if (command === "run") {
-    validateInteractiveArgs("run", args);
-    await runTask(await promptInstruction("execute"), "execute");
+    validateInteractiveArgs("run", args, locale);
+    await runTask(await promptInstruction("execute", locale), "execute");
     return;
   }
 
   if (command === "preview") {
-    validateInteractiveArgs("preview", args);
-    await runTask(await promptInstruction("preview"), "preview");
+    validateInteractiveArgs("preview", args, locale);
+    await runTask(await promptInstruction("preview", locale), "preview");
     return;
   }
 
   if (command === "model") {
-    const model = getModelName(args);
+    const model = getModelName(args, locale);
     setDeepseekModel(model);
-    console.log(`已切换 DeepSeek 模型：${model}`);
+    console.log(
+      text(
+        locale,
+        `已切换 DeepSeek 模型：${model}`,
+        `Switched DeepSeek model: ${model}`,
+      ),
+    );
     return;
   }
 
-  console.log(`用法：
-  npm run login
-  model -- deepseek-v4-flash
-  model -- deepseek-v4-pro
-  preview
-  run`);
+  console.log(createUsage(locale));
 }
 
 if (
@@ -338,7 +526,8 @@ if (
 ) {
   main().catch((error: unknown) => {
     const message = getErrorMessage(error);
-    console.error(`执行失败：${message}`);
+    const locale = readLocale();
+    console.error(text(locale, `执行失败：${message}`, `Failed: ${message}`));
     process.exitCode = 1;
   });
 }

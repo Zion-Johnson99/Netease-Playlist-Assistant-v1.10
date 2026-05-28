@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { AppConfig, ensureDataDir } from "./config.js";
+import { AppConfig, AppLocale, ensureDataDir } from "./config.js";
 import { MatchedSong, PlaylistTask } from "./types.js";
 
 export type PreviewCache = {
+  locale: AppLocale;
   sourcePlaylistId: number;
   sourcePlaylistName: string;
   targetPlaylistName: string;
@@ -13,7 +14,7 @@ export type PreviewCache = {
 };
 
 function getPreviewCachePath(config: AppConfig): string {
-  return path.join(config.dataDir, "last-preview.json");
+  return path.join(config.localeDataDir, "last-preview.json");
 }
 
 function isSameFilter(
@@ -25,7 +26,7 @@ function isSameFilter(
 
 export function savePreviewCache(
   config: AppConfig,
-  cache: Omit<PreviewCache, "createdAt">,
+  cache: Omit<PreviewCache, "createdAt" | "locale">,
 ): void {
   ensureDataDir(config);
   fs.writeFileSync(
@@ -33,6 +34,7 @@ export function savePreviewCache(
     JSON.stringify(
       {
         ...cache,
+        locale: config.locale,
         createdAt: new Date().toISOString(),
       },
       null,
@@ -55,6 +57,7 @@ export function readMatchingPreviewCache(
   const cache = JSON.parse(fs.readFileSync(cachePath, "utf8")) as PreviewCache;
   if (
     cache.sourcePlaylistId !== sourcePlaylistId ||
+    cache.locale !== config.locale ||
     cache.sourcePlaylistName !== task.sourcePlaylistName ||
     cache.targetPlaylistName !== task.targetPlaylistName ||
     !isSameFilter(cache.filter, task.filter)

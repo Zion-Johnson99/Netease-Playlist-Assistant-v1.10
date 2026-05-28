@@ -18,6 +18,14 @@ test("creates run interactive intro", () => {
   assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
 });
 
+test("creates English preview interactive intro", () => {
+  const intro = createInteractiveIntro("preview", "en");
+
+  assert.match(intro, /Mode: preview/);
+  assert.match(intro, /source playlist, filter, and new playlist name/);
+  assert.match(intro, /Find all Cantonese songs/);
+});
+
 test("rejects command arguments in interactive mode", () => {
   assert.throws(
     () =>
@@ -25,6 +33,13 @@ test("rejects command arguments in interactive mode", () => {
         "把歌单A里全部粤语歌添加进新建歌单粤语精选",
       ]),
     /preview 已进入对话输入模式/,
+  );
+});
+
+test("rejects command arguments in English interactive mode", () => {
+  assert.throws(
+    () => validateInteractiveArgs("preview", ["find Cantonese songs"], "en"),
+    /preview uses interactive input mode/,
   );
 });
 

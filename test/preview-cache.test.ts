@@ -14,7 +14,10 @@ function createTestConfig(): AppConfig {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-cache-"));
   return {
     dataDir,
+    localeDataDir: path.join(dataDir, "cn"),
     cookiePath: path.join(dataDir, "cookie.txt"),
+    appConfigPath: path.join(dataDir, "config.json"),
+    locale: "cn",
     deepseekApiKey: "test-key",
     deepseekModel: "test-model",
     deepseekBaseUrl: "https://example.test",
@@ -72,6 +75,49 @@ test("ignores preview cache for different task", () => {
       ...task,
       targetPlaylistName: "粤语精选 2",
     },
+    1,
+  );
+
+  assert.equal(cache, null);
+});
+
+test("stores preview cache under locale data directory", () => {
+  const config = createTestConfig();
+  savePreviewCache(config, {
+    sourcePlaylistId: 1,
+    sourcePlaylistName: "两首",
+    targetPlaylistName: "粤语精选",
+    filter: task.filter,
+    matchedSongs: [],
+  });
+
+  assert.equal(
+    fs.existsSync(path.join(config.localeDataDir, "last-preview.json")),
+    true,
+  );
+  assert.equal(
+    fs.existsSync(path.join(config.dataDir, "last-preview.json")),
+    false,
+  );
+});
+
+test("ignores preview cache for different locale", () => {
+  const config = createTestConfig();
+  savePreviewCache(config, {
+    sourcePlaylistId: 1,
+    sourcePlaylistName: "两首",
+    targetPlaylistName: "粤语精选",
+    filter: task.filter,
+    matchedSongs: [],
+  });
+
+  const cache = readMatchingPreviewCache(
+    {
+      ...config,
+      locale: "en",
+      localeDataDir: path.join(config.dataDir, "en"),
+    },
+    task,
     1,
   );
 

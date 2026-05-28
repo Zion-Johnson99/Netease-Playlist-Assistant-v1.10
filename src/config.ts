@@ -1,20 +1,27 @@
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
+import { text } from "./locale.js";
 
 const dataDir = path.resolve(process.cwd(), ".netease-assistant");
 const cookiePath = path.join(dataDir, "cookie.txt");
+const appConfigPath = path.join(dataDir, "config.json");
 const envPath = path.resolve(process.cwd(), ".env");
 const supportedDeepseekModels = [
   "deepseek-v4-pro",
   "deepseek-v4-flash",
 ] as const;
+const supportedLocales = ["cn", "en"] as const;
 
 export type DeepseekModel = (typeof supportedDeepseekModels)[number];
+export type AppLocale = (typeof supportedLocales)[number];
 
 export type AppConfig = {
   dataDir: string;
+  localeDataDir: string;
   cookiePath: string;
+  appConfigPath: string;
+  locale: AppLocale;
   deepseekApiKey: string | undefined;
   deepseekModel: string;
   deepseekBaseUrl: string;
@@ -33,9 +40,48 @@ export function formatSupportedDeepseekModels(): string {
   return supportedDeepseekModels.join(" 或 ");
 }
 
+export function isSupportedLocale(locale: string): locale is AppLocale {
+  return supportedLocales.includes(locale as AppLocale);
+}
+
+export function setLocale(
+  locale: AppLocale,
+  targetConfigPath = appConfigPath,
+): void {
+  const targetDataDir = path.dirname(targetConfigPath);
+  fs.mkdirSync(targetDataDir, { recursive: true });
+  fs.writeFileSync(
+    targetConfigPath,
+    `${JSON.stringify({ locale }, null, 2)}\n`,
+    "utf8",
+  );
+}
+
+export function readLocale(targetConfigPath = appConfigPath): AppLocale {
+  if (!fs.existsSync(targetConfigPath)) {
+    return "cn";
+  }
+
+  const raw = JSON.parse(fs.readFileSync(targetConfigPath, "utf8")) as {
+    locale?: unknown;
+  };
+  if (typeof raw.locale === "string" && isSupportedLocale(raw.locale)) {
+    return raw.locale;
+  }
+
+  return "cn";
+}
+
 export function setDeepseekModel(model: string, targetEnvPath = envPath): void {
   if (!isSupportedDeepseekModel(model)) {
-    throw new Error(`模型只支持 ${formatSupportedDeepseekModels()}`);
+    const locale = readLocale();
+    throw new Error(
+      text(
+        locale,
+        `模型只支持 ${formatSupportedDeepseekModels()}`,
+        `Model only supports ${formatSupportedDeepseekModels().replace(" 或 ", " or ")}`,
+      ),
+    );
   }
 
   const nextLine = `DEEPSEEK_MODEL=${model}`;
@@ -85,9 +131,13 @@ function readPositiveInteger(name: string, fallback: number): number {
 }
 
 export function loadConfig(): AppConfig {
+  const locale = readLocale();
   return {
     dataDir,
+    localeDataDir: path.join(dataDir, locale),
     cookiePath,
+    appConfigPath,
+    locale,
     deepseekApiKey: process.env.DEEPSEEK_API_KEY,
     deepseekModel: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
     deepseekBaseUrl:
@@ -106,16 +156,29 @@ export function loadConfig(): AppConfig {
 
 export function ensureDataDir(config = loadConfig()): void {
   fs.mkdirSync(config.dataDir, { recursive: true });
+  fs.mkdirSync(config.localeDataDir, { recursive: true });
 }
 
 export function readCookie(config = loadConfig()): string {
   if (!fs.existsSync(config.cookiePath)) {
-    throw new Error(`未找到网易云登录状态，请先运行 npm run login`);
+    throw new Error(
+      text(
+        config.locale,
+        "未找到网易云登录状态，请先运行 login",
+        "NetEase login state was not found. Run login first.",
+      ),
+    );
   }
 
   const cookie = fs.readFileSync(config.cookiePath, "utf8").trim();
   if (!cookie) {
-    throw new Error(`网易云登录状态为空，请重新运行 npm run login`);
+    throw new Error(
+      text(
+        config.locale,
+        "网易云登录状态为空，请重新运行 login",
+        "NetEase login state is empty. Run login again.",
+      ),
+    );
   }
 
   return cookie;

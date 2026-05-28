@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { AppConfig } from "./config.js";
+import { AppConfig, AppLocale } from "./config.js";
+import { text } from "./locale.js";
 import { PlaylistTask, TaskSchema } from "./types.js";
 
 const ModelResponseSchema = z.object({
@@ -36,10 +37,15 @@ export async function parseInstruction(
   instruction: string,
   config: AppConfig,
   sourcePlaylistCandidates: string[] = [],
+  locale: AppLocale = config.locale,
 ): Promise<PlaylistTask> {
   if (!config.deepseekApiKey) {
     throw new Error(
-      "未配置 DEEPSEEK_API_KEY，请在项目根目录创建 .env 并写入该变量",
+      text(
+        locale,
+        "未配置 DEEPSEEK_API_KEY，请在项目根目录创建 .env 并写入该变量",
+        "DEEPSEEK_API_KEY is not configured. Create .env in the project root and set it.",
+      ),
     );
   }
 
@@ -53,8 +59,11 @@ export async function parseInstruction(
     messages: [
       {
         role: "system",
-        content:
+        content: text(
+          locale,
           "你把中文音乐歌单操作指令解析为 JSON。只输出 JSON，不输出解释。字段：sourcePlaylistName、targetPlaylistName、filter。filter.type 可选 artist、language、semantic。明确按歌手筛选时用 artist，明确按语种筛选时用 language，曲风、情绪、年代、场景、复杂描述用 semantic。filter.value 保留用户原始筛选值。sourcePlaylistName 只能填写用户已有歌单候选中的精确名称；用户说“我两首这个歌单”时，候选里存在“两首”，就输出“两首”。targetPlaylistName 按用户要新建的名称输出。",
+          "Parse English music playlist operation instructions into JSON. Output JSON only, with no explanation. Fields: sourcePlaylistName, targetPlaylistName, filter. filter.type must be one of artist, language, semantic. Use artist for explicit artist filters, language for explicit singing-language filters, and semantic for genre, mood, era, scene, or complex descriptions. Keep the original filter value in filter.value. sourcePlaylistName must be the exact name from the user's existing playlist candidates. targetPlaylistName must be the new playlist name requested by the user.",
+        ),
       },
       {
         role: "user",
@@ -69,7 +78,13 @@ export async function parseInstruction(
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {
-    throw new Error("模型没有返回解析结果");
+    throw new Error(
+      text(
+        locale,
+        "模型没有返回解析结果",
+        "The model returned no parse result.",
+      ),
+    );
   }
 
   const raw = extractJsonObject(content);

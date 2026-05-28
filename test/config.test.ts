@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { setDeepseekModel } from "../src/config.js";
+import { readLocale, setDeepseekModel, setLocale } from "../src/config.js";
 
 function createTempEnv(content: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-env-"));
@@ -58,4 +58,20 @@ test("rejects unsupported deepseek model names", () => {
     fs.readFileSync(envPath, "utf8"),
     "DEEPSEEK_MODEL=deepseek-v4-pro\n",
   );
+});
+
+test("reads cn as default locale", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-config-"));
+  const configPath = path.join(dir, "config.json");
+
+  assert.equal(readLocale(configPath), "cn");
+});
+
+test("writes and reads locale", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-config-"));
+  const configPath = path.join(dir, "config.json");
+
+  setLocale("en", configPath);
+
+  assert.equal(readLocale(configPath), "en");
 });

@@ -1,3 +1,5 @@
+import { AppLocale } from "./config.js";
+import { text } from "./locale.js";
 import { MatchedSong, PlaylistTask, Song } from "./types.js";
 
 const artistAliases = new Map<string, string[]>([
@@ -8,6 +10,7 @@ const artistAliases = new Map<string, string[]>([
 export function matchesArtist(
   song: Song,
   artistQuery: string,
+  locale: AppLocale = "cn",
 ): MatchedSong | null {
   const query = artistQuery.trim().toLowerCase();
   const aliases = artistAliases.get(query) ?? [query];
@@ -28,7 +31,11 @@ export function matchesArtist(
 
   return {
     ...song,
-    reason: `歌手匹配：${matchedAlias}`,
+    reason: text(
+      locale,
+      `歌手匹配：${matchedAlias}`,
+      `Artist match: ${matchedAlias}`,
+    ),
   };
 }
 
@@ -60,6 +67,7 @@ export type SemanticMatcherInput = {
 };
 
 export type FilterSongsOptions = {
+  locale?: AppLocale;
   onProgress?: (event: FilterProgress) => void;
   progressInterval?: number;
   onLyricError?: (event: { song: Song; error: unknown }) => void;
@@ -73,6 +81,7 @@ export async function filterSongs(
   options: FilterSongsOptions = {},
 ): Promise<MatchedSong[]> {
   const matched: MatchedSong[] = [];
+  const locale = options.locale ?? "cn";
   const progressInterval = options.progressInterval ?? 25;
 
   const reportProgress = (
@@ -110,7 +119,13 @@ export async function filterSongs(
 
   if (task.filter.type !== "artist") {
     if (!options.semanticMatcher) {
-      throw new Error(`语义筛选器未配置，无法处理：${task.filter.type}`);
+      throw new Error(
+        text(
+          locale,
+          `语义筛选器未配置，无法处理：${task.filter.type}`,
+          `Semantic matcher is not configured for ${task.filter.type}.`,
+        ),
+      );
     }
 
     let lastProgress = 0;
@@ -136,7 +151,7 @@ export async function filterSongs(
   }
 
   for (const [index, song] of songs.entries()) {
-    const artistMatch = matchesArtist(song, task.filter.value);
+    const artistMatch = matchesArtist(song, task.filter.value, locale);
     if (artistMatch) {
       matched.push(artistMatch);
     }

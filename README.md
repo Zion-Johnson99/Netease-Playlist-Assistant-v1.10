@@ -86,7 +86,15 @@ DEEPSEEK_BATCH_RETRIES=1
 npm link
 ```
 
-`npm link` 会把本项目的 `login`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
+`npm link` 会把本项目的 `cn`、`en`、`login`、`model`、`preview`、`run` 注册成本机终端命令。同一个克隆目录通常执行一次即可；换电脑、重新克隆、移动项目目录或取消链接后，需要重新执行。
+
+设置中文环境：
+
+```bash
+cn
+```
+
+默认语言是中文。运行 `en` 后切换到英文环境，后续 `preview` 和 `run` 的输入提示、输出文案、错误信息、模型解析和筛选理由都会使用英文；再次运行 `cn` 会切回中文。
 
 ## 使用方式
 
@@ -163,8 +171,11 @@ run
 ## 本地数据
 
 - `.netease-assistant/cookie.txt`：网易云登录状态。
-- `.netease-assistant/semantic-cache.json`：语义筛选缓存，包含歌曲百科摘要和模型判断结果。
-- `.netease-assistant/last-preview.json`：最近一次预览结果。
+- `.netease-assistant/config.json`：当前语言环境，`cn` 或 `en`。
+- `.netease-assistant/cn/semantic-cache.json`：中文环境的语义筛选缓存，包含歌曲百科摘要和模型判断结果。
+- `.netease-assistant/cn/last-preview.json`：中文环境最近一次预览结果。
+- `.netease-assistant/en/semantic-cache.json`：英文环境的语义筛选缓存。
+- `.netease-assistant/en/last-preview.json`：英文环境最近一次预览结果。
 - `.env`：DeepSeek API Key 和模型配置。
 
 这些文件已写入 `.gitignore`，上传 public 仓库前请确认没有提交本地 Cookie、API Key 或个人歌单缓存。
@@ -275,7 +286,15 @@ Register local commands:
 npm link
 ```
 
-`npm link` registers this project's `login`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
+`npm link` registers this project's `cn`, `en`, `login`, `model`, `preview`, and `run` commands in your local terminal. For the same cloned directory, one run is normally enough; run it again after changing machines, cloning again, moving the project directory, or unlinking the package.
+
+Set English as the active language:
+
+```bash
+en
+```
+
+The default language is Chinese. Run `cn` to switch back to Chinese. The active language controls prompts, terminal output, errors, instruction parsing, and matching reasons for later `preview` and `run` commands.
 
 ## Usage
 
@@ -308,7 +327,7 @@ preview
 Enter the full request in the prompt, for example:
 
 ```text
-把歌单A里全部粤语歌添加进新建歌单粤语精选
+Find all Cantonese songs in playlist A and add them to a new playlist named Cantonese Picks
 ```
 
 Common filtering examples:
@@ -350,8 +369,11 @@ After completion, check the created playlist in NetEase Cloud Music:
 ## Local Data
 
 - `.netease-assistant/cookie.txt`: NetEase login cookie.
-- `.netease-assistant/semantic-cache.json`: semantic cache for metadata and model decisions.
-- `.netease-assistant/last-preview.json`: latest preview result.
+- `.netease-assistant/config.json`: active language, `cn` or `en`.
+- `.netease-assistant/cn/semantic-cache.json`: semantic cache for metadata and model decisions in Chinese mode.
+- `.netease-assistant/cn/last-preview.json`: latest preview result in Chinese mode.
+- `.netease-assistant/en/semantic-cache.json`: semantic cache in English mode.
+- `.netease-assistant/en/last-preview.json`: latest preview result in English mode.
 - `.env`: DeepSeek API Key and model settings.
 
 These files are ignored by Git. Before publishing the repository, check that no Cookie, API Key, or personal playlist cache has been committed.

@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
+    "cn": "./bin/cn.js",
+    "en": "./bin/en.js",
     "login": "./bin/login.js",
     "model": "./bin/model.js",
     "preview": "./bin/preview.js",

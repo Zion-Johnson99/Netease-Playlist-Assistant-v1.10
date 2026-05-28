@@ -1,8 +1,9 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { AppConfig } from "./config.js";
+import { AppConfig, AppLocale } from "./config.js";
 import { extractJsonObject } from "./deepseek.js";
 import { SemanticMatcherInput } from "./filter.js";
+import { text } from "./locale.js";
 import { createSemanticDecisionKey, SemanticCache } from "./semantic-cache.js";
 import { MatchedSong, Song } from "./types.js";
 
@@ -142,6 +143,20 @@ function createProgressBar(processed: number, total: number): string {
   return `[${"█".repeat(filled)}${"░".repeat(width - filled)}] ${percent}%`;
 }
 
+function createProgressMessage(
+  locale: AppLocale,
+  phase: "lyrics" | "metadata",
+  processed: number,
+  total: number,
+): string {
+  const label = text(
+    locale,
+    phase === "lyrics" ? "读取歌词" : "读取元数据",
+    phase === "lyrics" ? "Reading lyrics" : "Reading metadata",
+  );
+  return `${label}: ${createProgressBar(processed, total)} ${processed}/${total}`;
+}
+
 function collectText(value: unknown, output: string[], prefix = ""): void {
   if (output.join("\n").length >= metadataTextLimit) {
     return;
@@ -214,14 +229,30 @@ function isLanguageFilter(
   return filter.type === "language";
 }
 
-function createBaseMetadataText(song: Song, lyric: string | undefined): string {
+function createBaseMetadataText(
+  locale: AppLocale,
+  song: Song,
+  lyric: string | undefined,
+): string {
   const lyricSnippet = createLyricSnippet(lyric);
   return trimText(
     [
-      `歌曲：${song.name}`,
-      `歌手：${song.artists.map((artist) => artist.name).join("/")}`,
-      song.album ? `专辑：${song.album}` : "",
-      lyricSnippet ? `歌词片段：${lyricSnippet}` : "",
+      text(locale, `歌曲：${song.name}`, `Song: ${song.name}`),
+      text(
+        locale,
+        `歌手：${song.artists.map((artist) => artist.name).join("/")}`,
+        `Artists: ${song.artists.map((artist) => artist.name).join("/")}`,
+      ),
+      song.album
+        ? text(locale, `专辑：${song.album}`, `Album: ${song.album}`)
+        : "",
+      lyricSnippet
+        ? text(
+            locale,
+            `歌词片段：${lyricSnippet}`,
+            `Lyric snippet: ${lyricSnippet}`,
+          )
+        : "",
     ]
       .filter(Boolean)
       .join("\n\n"),
@@ -255,6 +286,7 @@ async function readMetadata(
   input: SemanticMatcherInput,
   provider: SemanticMetadataProvider,
   cache: SemanticCache,
+  locale: AppLocale,
 ): Promise<SongSemanticContext> {
   const cached = cache.getMetadata(song.id);
   if (cached) {
@@ -272,12 +304,28 @@ async function readMetadata(
 
   const lyricSnippet = createLyricSnippet(lyric);
   const sections = [
-    `歌曲：${song.name}`,
-    `歌手：${song.artists.map((artist) => artist.name).join("/")}`,
-    song.album ? `专辑：${song.album}` : "",
-    lyricSnippet ? `歌词片段：${lyricSnippet}` : "",
+    text(locale, `歌曲：${song.name}`, `Song: ${song.name}`),
+    text(
+      locale,
+      `歌手：${song.artists.map((artist) => artist.name).join("/")}`,
+      `Artists: ${song.artists.map((artist) => artist.name).join("/")}`,
+    ),
+    song.album
+      ? text(locale, `专辑：${song.album}`, `Album: ${song.album}`)
+      : "",
+    lyricSnippet
+      ? text(
+          locale,
+          `歌词片段：${lyricSnippet}`,
+          `Lyric snippet: ${lyricSnippet}`,
+        )
+      : "",
     wikiSummary[0]?.status === "fulfilled"
-      ? `音乐百科：${compactUnknownText(wikiSummary[0].value)}`
+      ? text(
+          locale,
+          `音乐百科：${compactUnknownText(wikiSummary[0].value)}`,
+          `Music encyclopedia: ${compactUnknownText(wikiSummary[0].value)}`,
+        )
       : "",
   ].filter(Boolean);
 
@@ -295,18 +343,19 @@ async function createLanguageContexts(
   input: SemanticMatcherInput,
   cache: SemanticCache,
   concurrency: number,
+  locale: AppLocale,
 ): Promise<SongSemanticContext[]> {
   let processed = 0;
   input.onProgress(0, 0, {
     phase: "lyrics",
     total: songs.length,
     force: true,
-    message: `读取歌词：${createProgressBar(0, songs.length)} 0/${songs.length}`,
+    message: createProgressMessage(locale, "lyrics", 0, songs.length),
   });
 
   return mapWithConcurrency(songs, concurrency, async (song) => {
     const lyric = await readLyricWithCache(song, input, cache);
-    const metadataText = createBaseMetadataText(song, lyric);
+    const metadataText = createBaseMetadataText(locale, song, lyric);
 
     processed += 1;
     if (processed % 25 === 0 || processed === songs.length) {
@@ -314,7 +363,12 @@ async function createLanguageContexts(
         phase: "lyrics",
         total: songs.length,
         force: true,
-        message: `读取歌词：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
+        message: createProgressMessage(
+          locale,
+          "lyrics",
+          processed,
+          songs.length,
+        ),
       });
     }
 
@@ -331,17 +385,18 @@ async function createMetadataContexts(
   provider: SemanticMetadataProvider,
   cache: SemanticCache,
   concurrency: number,
+  locale: AppLocale,
 ): Promise<SongSemanticContext[]> {
   let processed = 0;
   input.onProgress(0, 0, {
     phase: "metadata",
     total: songs.length,
     force: true,
-    message: `读取元数据：${createProgressBar(0, songs.length)} 0/${songs.length}`,
+    message: createProgressMessage(locale, "metadata", 0, songs.length),
   });
 
   return mapWithConcurrency(songs, concurrency, async (song) => {
-    const context = await readMetadata(song, input, provider, cache);
+    const context = await readMetadata(song, input, provider, cache, locale);
 
     processed += 1;
     if (processed % 25 === 0 || processed === songs.length) {
@@ -349,7 +404,12 @@ async function createMetadataContexts(
         phase: "metadata",
         total: songs.length,
         force: true,
-        message: `读取元数据：${createProgressBar(processed, songs.length)} ${processed}/${songs.length}`,
+        message: createProgressMessage(
+          locale,
+          "metadata",
+          processed,
+          songs.length,
+        ),
       });
     }
 
@@ -358,6 +418,7 @@ async function createMetadataContexts(
 }
 
 async function classifyContexts(
+  locale: AppLocale,
   client: OpenAI,
   model: string,
   input: SemanticMatcherInput,
@@ -374,6 +435,7 @@ async function classifyContexts(
 
   for (const context of contexts) {
     const key = createSemanticDecisionKey(
+      locale,
       input.task,
       context.song,
       context.metadataText,
@@ -405,7 +467,11 @@ async function classifyContexts(
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定：${createProgressBar(0, missingContexts.length)} 已完成 0/${missingContexts.length}，批次 0/${batches.length}，运行中 0，失败批次 0，并发 ${batchConcurrency}`,
+      message: text(
+        locale,
+        `DeepSeek 判定：${createProgressBar(0, missingContexts.length)} 已完成 0/${missingContexts.length}，批次 0/${batches.length}，运行中 0，失败批次 0，并发 ${batchConcurrency}`,
+        `DeepSeek judging: ${createProgressBar(0, missingContexts.length)} completed 0/${missingContexts.length}, batch 0/${batches.length}, running 0, failed batches 0, concurrency ${batchConcurrency}`,
+      ),
     });
   }
 
@@ -418,7 +484,11 @@ async function classifyContexts(
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+      message: text(
+        locale,
+        `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+        `DeepSeek judging: ${createProgressBar(completedSongCount, missingContexts.length)} completed ${completedSongCount}/${missingContexts.length}, batch ${batch.index + 1}/${batches.length}, running ${runningBatchCount}, failed batches ${failedBatchCount}`,
+      ),
     });
 
     const batchDecisions = await classifyBatchWithRetry(
@@ -428,6 +498,7 @@ async function classifyContexts(
       batch,
       batchTimeoutMs,
       batchRetries,
+      locale,
     );
 
     if (!batchDecisions) {
@@ -438,7 +509,11 @@ async function classifyContexts(
         phase: "semantic",
         total: missingContexts.length,
         force: true,
-        message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+        message: text(
+          locale,
+          `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+          `DeepSeek judging: ${createProgressBar(completedSongCount, missingContexts.length)} completed ${completedSongCount}/${missingContexts.length}, batch ${batch.index + 1}/${batches.length}, running ${runningBatchCount}, failed batches ${failedBatchCount}`,
+        ),
       });
       return;
     }
@@ -452,6 +527,7 @@ async function classifyContexts(
       }
 
       const key = createSemanticDecisionKey(
+        locale,
         input.task,
         context.song,
         context.metadataText,
@@ -471,7 +547,11 @@ async function classifyContexts(
       phase: "semantic",
       total: missingContexts.length,
       force: true,
-      message: `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+      message: text(
+        locale,
+        `DeepSeek 判定：${createProgressBar(completedSongCount, missingContexts.length)} 已完成 ${completedSongCount}/${missingContexts.length}，批次 ${batch.index + 1}/${batches.length}，运行中 ${runningBatchCount}，失败批次 ${failedBatchCount}`,
+        `DeepSeek judging: ${createProgressBar(completedSongCount, missingContexts.length)} completed ${completedSongCount}/${missingContexts.length}, batch ${batch.index + 1}/${batches.length}, running ${runningBatchCount}, failed batches ${failedBatchCount}`,
+      ),
     });
   });
 
@@ -481,7 +561,11 @@ async function classifyContexts(
     if (decision?.matched && decision.confidence >= confidenceThreshold) {
       matched.push({
         ...context.song,
-        reason: `语义匹配 ${decision.confidence.toFixed(2)}：${decision.reason}`,
+        reason: text(
+          locale,
+          `语义匹配 ${decision.confidence.toFixed(2)}：${decision.reason}`,
+          `Semantic match ${decision.confidence.toFixed(2)}: ${decision.reason}`,
+        ),
       });
     }
     input.onProgress(index + 1, matched.length);
@@ -496,6 +580,7 @@ async function classifyBatch(
   taskFilter: SemanticMatcherInput["task"]["filter"],
   contexts: SongSemanticContext[],
   timeoutMs: number,
+  locale: AppLocale,
 ): Promise<SemanticDecision[]> {
   const completion = await withTimeout(
     client.chat.completions.create(
@@ -504,8 +589,11 @@ async function classifyBatch(
         messages: [
           {
             role: "system",
-            content:
+            content: text(
+              locale,
               '你是音乐筛选判定器。只输出 JSON 对象，格式为 {"results":[{"songId":数字,"matched":布尔值,"confidence":0到1,"reason":"简短中文理由","tags":["标签"]}]}。语言筛选按实际演唱语种判断，歌手地区和常唱语种只作为弱线索，单独出现时给低置信。曲风、情绪、年代、场景按歌曲百科、曲风、专辑、歌词片段综合判断。',
+              'You are a music filtering classifier. Output a JSON object only, with this shape: {"results":[{"songId":number,"matched":boolean,"confidence":0 to 1,"reason":"brief English reason","tags":["tag"]}]}. For language filters, judge the actual singing language. Artist region and common singing language are weak signals only and should have low confidence by themselves. For genre, mood, era, scene, and other semantic criteria, judge using music encyclopedia data, genre, album, and lyric snippets.',
+            ),
           },
           {
             role: "user",
@@ -523,12 +611,22 @@ async function classifyBatch(
       },
     ),
     timeoutMs,
-    `DeepSeek 批次超过 ${timeoutMs / 1000}s 未返回`,
+    text(
+      locale,
+      `DeepSeek 批次超过 ${timeoutMs / 1000}s 未返回`,
+      `DeepSeek batch did not return within ${timeoutMs / 1000}s.`,
+    ),
   );
 
   const content = completion.choices[0]?.message?.content;
   if (!content) {
-    throw new Error("模型没有返回语义筛选结果");
+    throw new Error(
+      text(
+        locale,
+        "模型没有返回语义筛选结果",
+        "The model returned no semantic filtering result.",
+      ),
+    );
   }
 
   const parsed = extractJsonObject(content);
@@ -542,6 +640,7 @@ async function classifyBatchWithRetry(
   batch: SemanticBatch,
   timeoutMs: number,
   retries: number,
+  locale: AppLocale,
 ): Promise<SemanticDecision[] | null> {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
@@ -551,6 +650,7 @@ async function classifyBatchWithRetry(
         input.task.filter,
         batch.contexts,
         timeoutMs,
+        locale,
       );
     } catch (error) {
       const canRetry = attempt < retries;
@@ -559,8 +659,16 @@ async function classifyBatchWithRetry(
         total: batch.contexts.length,
         force: true,
         message: canRetry
-          ? `DeepSeek 判定：第 ${batch.index + 1} 批失败，准备重试 ${attempt + 1}/${retries}，原因：${error instanceof Error ? error.message : String(error)}`
-          : `DeepSeek 判定：第 ${batch.index + 1} 批失败，已跳过，原因：${error instanceof Error ? error.message : String(error)}`,
+          ? text(
+              locale,
+              `DeepSeek 判定：第 ${batch.index + 1} 批失败，准备重试 ${attempt + 1}/${retries}，原因：${error instanceof Error ? error.message : String(error)}`,
+              `DeepSeek judging: batch ${batch.index + 1} failed, retrying ${attempt + 1}/${retries}. Reason: ${error instanceof Error ? error.message : String(error)}`,
+            )
+          : text(
+              locale,
+              `DeepSeek 判定：第 ${batch.index + 1} 批失败，已跳过，原因：${error instanceof Error ? error.message : String(error)}`,
+              `DeepSeek judging: batch ${batch.index + 1} failed and was skipped. Reason: ${error instanceof Error ? error.message : String(error)}`,
+            ),
       });
 
       if (!canRetry) {
@@ -580,7 +688,11 @@ export function createDeepseekSemanticMatcher(
   return async (input) => {
     if (!config.deepseekApiKey) {
       throw new Error(
-        "语义筛选需要配置 DEEPSEEK_API_KEY，请在项目根目录 .env 写入该变量",
+        text(
+          config.locale,
+          "语义筛选需要配置 DEEPSEEK_API_KEY，请在项目根目录 .env 写入该变量",
+          "Semantic filtering requires DEEPSEEK_API_KEY in the project root .env file.",
+        ),
       );
     }
 
@@ -606,9 +718,11 @@ export function createDeepseekSemanticMatcher(
         input,
         cache,
         concurrency,
+        config.locale,
       );
       cache.save();
       return classifyContexts(
+        config.locale,
         client,
         config.deepseekModel,
         input,
@@ -628,9 +742,11 @@ export function createDeepseekSemanticMatcher(
       provider,
       cache,
       concurrency,
+      config.locale,
     );
     cache.save();
     return classifyContexts(
+      config.locale,
       client,
       config.deepseekModel,
       input,
