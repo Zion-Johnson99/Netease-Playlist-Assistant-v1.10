@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { extractJsonObject } from "../src/deepseek.js";
+import { describeDeepseekError, extractJsonObject } from "../src/deepseek.js";
 
 test("extracts plain json object", () => {
   const parsed = extractJsonObject(
@@ -22,4 +22,35 @@ test("extracts fenced json object", () => {
       value: "JB",
     },
   });
+});
+
+test("describes deepseek timeout clearly in Chinese", () => {
+  const message = describeDeepseekError(
+    {
+      name: "APIConnectionTimeoutError",
+      message: "Request timed out.",
+    },
+    "cn",
+    "解析需求",
+    30_000,
+  );
+
+  assert.match(message, /DeepSeek 解析需求请求超时/);
+  assert.match(message, /30 秒/);
+});
+
+test("describes deepseek 503 clearly in Chinese", () => {
+  const message = describeDeepseekError(
+    {
+      name: "InternalServerError",
+      message: "Service is too busy.",
+      status: 503,
+    },
+    "cn",
+    "解析需求",
+    30_000,
+  );
+
+  assert.match(message, /DeepSeek 服务繁忙/);
+  assert.match(message, /503/);
 });

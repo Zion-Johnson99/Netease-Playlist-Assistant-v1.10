@@ -330,6 +330,13 @@ async function runTask(instruction: string, mode: Mode): Promise<void> {
     ),
   );
   const playlists = await listOwnPlaylists(cookie, profile);
+  console.log(
+    text(
+      config.locale,
+      `正在调用 DeepSeek 解析需求，最多等待 30 秒...`,
+      `Calling DeepSeek to parse the request. Waiting up to 30 seconds...`,
+    ),
+  );
   const task = await parseInstruction(
     instruction,
     config,
