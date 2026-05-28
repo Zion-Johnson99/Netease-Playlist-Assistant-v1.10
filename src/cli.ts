@@ -28,7 +28,7 @@ import {
 } from "./netease.js";
 import { MatchedSong, PlaylistSummary, PlaylistTask, Song } from "./types.js";
 import { createDeepseekSemanticMatcher } from "./semantic.js";
-import { formatTable } from "./table.js";
+import { displayWidth, formatTable } from "./table.js";
 
 type Mode = "execute" | "preview";
 
@@ -56,12 +56,6 @@ function stripAnsi(value: string): string {
   return value.replace(ansiPattern, "");
 }
 
-function getDisplayWidth(value: string): number {
-  return Array.from(stripAnsi(value)).reduce((width, char) => {
-    return width + (char.charCodeAt(0) > 0xff ? 2 : 1);
-  }, 0);
-}
-
 function colorModeValue(mode: Mode, value: string): string {
   const color = mode === "preview" ? introAnsi.modeBlue : introAnsi.modeGreen;
   return `${color}${value}${introAnsi.reset}`;
@@ -82,7 +76,7 @@ function wrapDisplayText(value: string, maxWidth: number): string[] {
 
     for (const word of value.split(" ")) {
       const next = current ? `${current} ${word}` : word;
-      if (current && getDisplayWidth(next) > maxWidth) {
+      if (current && displayWidth(next) > maxWidth) {
         lines.push(current);
         current = word;
       } else {
@@ -102,7 +96,7 @@ function wrapDisplayText(value: string, maxWidth: number): string[] {
   let currentWidth = 0;
 
   for (const char of Array.from(value)) {
-    const charWidth = char.charCodeAt(0) > 0xff ? 2 : 1;
+    const charWidth = displayWidth(char);
     if (currentWidth > 0 && currentWidth + charWidth > maxWidth) {
       lines.push(current);
       current = "";
@@ -120,7 +114,7 @@ function wrapDisplayText(value: string, maxWidth: number): string[] {
 }
 
 function formatIntroField(label: string, value: string): string[] {
-  const labelWidth = getDisplayWidth(label);
+  const labelWidth = displayWidth(label);
   const prefix = `${colorLabel(label)} `;
   const continuationPrefix = " ".repeat(labelWidth + 1);
   const wrapped = wrapDisplayText(value, introContentWidth - labelWidth - 1);
@@ -131,17 +125,29 @@ function formatIntroField(label: string, value: string): string[] {
 }
 
 function createSoftNeteaseFrame(lines: string[]): string {
-  const horizontalWidth = Math.max(
-    introContentWidth + 4,
-    ...lines.map((line) => getDisplayWidth(line) + 4),
+  const borderChar = "│";
+  const borderColWidth = displayWidth(borderChar);
+  const hChar = "─";
+  const hCharColWidth = displayWidth(hChar);
+  const cornerColWidth = displayWidth("╭");
+  const leftPadCols = 2;
+
+  const contentMaxCols = Math.max(
+    introContentWidth,
+    ...lines.map((line) => displayWidth(stripAnsi(line))),
   );
-  const top = colorBorder(`╭${"─".repeat(horizontalWidth)}╮`);
-  const bottom = colorBorder(`╰${"─".repeat(horizontalWidth)}╯`);
-  const vertical = colorBorder("│");
+
+  const frameCols =
+    borderColWidth + leftPadCols + contentMaxCols + borderColWidth;
+  const hCount = Math.round((frameCols - 2 * cornerColWidth) / hCharColWidth);
+
+  const top = colorBorder(`╭${hChar.repeat(hCount)}╮`);
+  const bottom = colorBorder(`╰${hChar.repeat(hCount)}╯`);
+  const vertical = colorBorder(borderChar);
+
   const framedLines = lines.map((line) => {
-    const rightPadding = " ".repeat(
-      horizontalWidth - getDisplayWidth(line) - 2,
-    );
+    const rightPadCols = contentMaxCols - displayWidth(stripAnsi(line));
+    const rightPadding = " ".repeat(Math.max(0, rightPadCols));
     return `${vertical}  ${line}${rightPadding}${vertical}`;
   });
 
