@@ -20,6 +20,11 @@ const result = spawnSync(
   {
     cwd: rootDir,
     stdio: "inherit",
+    env: {
+      ...process.env,
+      NODE_OPTIONS:
+        `${process.env.NODE_OPTIONS ?? ""} --dns-result-order=ipv4first`.trim(),
+    },
   },
 );
 
