@@ -18,7 +18,7 @@ It fits requests like these:
 - "Find Justin Bieber songs in my commute playlist"
 - "Collect late-night English slow songs"
 - "Pick the first 20 Cantonese songs from a large playlist"
-- "Add instrumental tracks missing from my Chinese Songs playlist"
+- "Add Cantonese Picks tracks missing from Cantonese Memory into Cantonese Memory"
 
 The project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi). It uses NetEase Cloud Music login, playlist, track, lyric, and music metadata APIs, then wraps them into a personal playlist cleanup workflow.
 
@@ -159,15 +159,19 @@ preview
 
 ![preview mode](docs/images/02-preview-en.jpg)
 
-Enter a full request when prompted, for example:
+Enter a full request when prompted.
+
+Create a new playlist:
 
 ```text
 Find all Coldplay songs in my liked songs and create a new playlist named Coldplay Picks
 ```
 
-It also supports completion between two existing playlists:
+Complete an existing playlist:
 
-<small>preview/run: List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"</small>
+```text
+List tracks in "Cantonese Picks" that are missing from "Cantonese Memory", then add them to "Cantonese Memory"
+```
 
 Create the playlist after preview:
 
@@ -205,7 +209,9 @@ Find late-night English slow songs in my English playlist and create a playlist 
 
 Complete an existing playlist:
 
-<small>List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"</small>
+```text
+List tracks in "Cantonese Picks" that are missing from "Cantonese Memory", then add them to "Cantonese Memory"
+```
 
 Common filtering modes:
 

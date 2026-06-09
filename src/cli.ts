@@ -917,15 +917,27 @@ export function createInteractiveIntro(
   const hint =
     locale === "en"
       ? mode === "preview"
-        ? "filter into a new playlist, or compare two existing playlists"
-        : "reuse preview, then create or complete the target playlist"
+        ? "new: source playlist, filter, new target playlist"
+        : "new: reuse preview, then create the target playlist"
       : mode === "preview"
-        ? "筛选建单，或对比两个已有歌单"
-        : "复用预览，再创建或补全目标歌单";
+        ? "新建：源歌单、筛选条件、目标新歌单名"
+        : "新建：复用预览，再创建目标歌单";
+  const diffHint =
+    locale === "en"
+      ? mode === "preview"
+        ? "complete: source playlist, existing target playlist"
+        : "complete: reuse preview, then add missing tracks"
+      : mode === "preview"
+        ? "补全：源歌单、目标已有歌单名"
+        : "补全：复用预览，再添加缺失歌曲";
   const example =
     locale === "en"
-      ? 'List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"'
-      : "把“纯音乐”中“中文歌”没有的歌列出来，并添加到“中文歌”";
+      ? "new: Find all Cantonese songs in playlist xx, list them, then add them to a new playlist named Cantonese Picks"
+      : "新建：帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做粤语精选";
+  const diffExample =
+    locale === "en"
+      ? 'complete: List tracks in "Cantonese Picks" that are missing from "Cantonese Memory", then add them to "Cantonese Memory"'
+      : "补全：把“粤语精选”中“粤语记忆”没有的歌列出来，并添加到“粤语记忆”";
   const lines =
     locale === "en"
       ? [
@@ -934,7 +946,9 @@ export function createInteractiveIntro(
           ...formatIntroField("model:", model),
           "",
           ...formatIntroField("request:", hint),
+          ...formatIntroField("", diffHint),
           ...formatIntroField("example:", example),
+          ...formatIntroField("", diffExample),
         ]
       : [
           title,
@@ -942,7 +956,9 @@ export function createInteractiveIntro(
           ...formatIntroField("模型：", model),
           "",
           ...formatIntroField("需求：", hint),
+          ...formatIntroField("", diffHint),
           ...formatIntroField("示例：", example),
+          ...formatIntroField("", diffExample),
         ];
 
   return createSoftNeteaseFrame(

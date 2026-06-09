@@ -35,9 +35,12 @@ test("creates preview interactive intro", () => {
   assert.match(intro, /\u001b\[90m模式：\u001b\[0m \u001b\[94m预览\u001b\[0m/);
   assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-pro/);
   assert.match(intro, /Netease Playlist Assistant v1\.10/);
-  assert.match(intro, /筛选建单，或对比两个已有歌单/);
-  assert.match(intro, /把“纯音乐”中“中文歌”没有的歌列出来/);
-  assert.match(intro, /添加到“中文/);
+  assert.match(intro, /新建：源歌单、筛选条件、目标新歌单名/);
+  assert.match(intro, /补全：源歌单、目标已有歌单名/);
+  assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
+  assert.match(intro, /叫做粤语精选/);
+  assert.match(intro, /把“粤语精选”中“粤语记忆”没有的歌列出来/);
+  assert.match(intro, /粤语记忆”/);
   assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
   assert.match(intro, /╯\u001b\[0m$/);
   assert.match(intro, /\u001b\[101m\u001b\[97m ◎ /);
@@ -49,8 +52,9 @@ test("creates run interactive intro", () => {
 
   assert.match(intro, /\u001b\[90m模式：\u001b\[0m \u001b\[92m执行\u001b\[0m/);
   assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-flash/);
-  assert.match(intro, /复用预览，再创建或补全目标歌单/);
-  assert.match(intro, /把“纯音乐”中“中文歌”没有的歌列出来/);
+  assert.match(intro, /新建：复用预览，再创建目标歌单/);
+  assert.match(intro, /补全：复用预览，再添加缺失歌曲/);
+  assert.match(intro, /把“粤语精选”中“粤语记忆”没有的歌列出来/);
   assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
   assertClosedFrame(intro);
 });
@@ -63,10 +67,14 @@ test("creates English preview interactive intro", () => {
     /\u001b\[90mmode:\u001b\[0m \u001b\[94mpreview\u001b\[0m/,
   );
   assert.match(intro, /\u001b\[90mmodel:\u001b\[0m deepseek-v4-flash/);
-  assert.match(intro, /filter into a new playlist/);
-  assert.match(intro, /compare two/);
-  assert.match(intro, /List tracks in "Instrumental"/);
-  assert.match(intro, /"Chinese Songs"/);
+  assert.match(intro, /new: source playlist, filter, new target/);
+  assert.match(intro, /playlist/);
+  assert.match(intro, /complete: source playlist, existing target playlist/);
+  assert.match(intro, /Find all Cantonese songs in playlist xx/);
+  assert.match(intro, /new playlist/);
+  assert.match(intro, /named Cantonese Picks/);
+  assert.match(intro, /"Cantonese Picks"/);
+  assert.match(intro, /"Cantonese Memory"/);
   assertClosedFrame(intro);
 });
 
