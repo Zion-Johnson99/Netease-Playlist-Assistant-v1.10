@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   applyTaskLimit,
   createInteractiveIntro,
+  formatDiffSongsTable,
   formatDeepseekParseProgressMessage,
   formatTerminalProgressLine,
   formatMatchedSongsTable,
@@ -33,9 +34,10 @@ test("creates preview interactive intro", () => {
 
   assert.match(intro, /\u001b\[90m模式：\u001b\[0m \u001b\[94m预览\u001b\[0m/);
   assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-pro/);
-  assert.match(intro, /源歌单、筛选条件、目标歌单名/);
-  assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
-  assert.match(intro, /叫做粤语精选/);
+  assert.match(intro, /Netease Playlist Assistant v1\.10/);
+  assert.match(intro, /筛选建单，或对比两个已有歌单/);
+  assert.match(intro, /把“纯音乐”中“中文歌”没有的歌列出来/);
+  assert.match(intro, /添加到“中文/);
   assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
   assert.match(intro, /╯\u001b\[0m$/);
   assert.match(intro, /\u001b\[101m\u001b\[97m ◎ /);
@@ -45,13 +47,10 @@ test("creates preview interactive intro", () => {
 test("creates run interactive intro", () => {
   const intro = createInteractiveIntro("execute");
 
-  assert.match(
-    intro,
-    /\u001b\[90m模式：\u001b\[0m \u001b\[92m建立歌单\u001b\[0m/,
-  );
+  assert.match(intro, /\u001b\[90m模式：\u001b\[0m \u001b\[92m执行\u001b\[0m/);
   assert.match(intro, /\u001b\[90m模型：\u001b\[0m deepseek-v4-flash/);
-  assert.match(intro, /优先复用结果/);
-  assert.match(intro, /帮我在xx这个歌单中找到所有粤语歌曲/);
+  assert.match(intro, /复用预览，再创建或补全目标歌单/);
+  assert.match(intro, /把“纯音乐”中“中文歌”没有的歌列出来/);
   assert.match(intro, /\u001b\[38;2;220;72;82m╭/);
   assertClosedFrame(intro);
 });
@@ -64,10 +63,10 @@ test("creates English preview interactive intro", () => {
     /\u001b\[90mmode:\u001b\[0m \u001b\[94mpreview\u001b\[0m/,
   );
   assert.match(intro, /\u001b\[90mmodel:\u001b\[0m deepseek-v4-flash/);
-  assert.match(intro, /source playlist, filter, target name/);
-  assert.match(intro, /Find all Cantonese songs in playlist xx/);
-  assert.match(intro, /new playlist named/);
-  assert.match(intro, /Cantonese Picks/);
+  assert.match(intro, /filter into a new playlist/);
+  assert.match(intro, /compare two/);
+  assert.match(intro, /List tracks in "Instrumental"/);
+  assert.match(intro, /"Chinese Songs"/);
   assertClosedFrame(intro);
 });
 
@@ -116,6 +115,23 @@ test("formats matched songs as one-line aligned table", () => {
     "序号  歌曲           歌手      理由",
     "01    Forever Yours  J. Brown  语义匹配 0.90：浪漫婚礼主题",
     "02    好天气         韦礼安    语义匹配 0.90：旋律轻快温暖",
+  ]);
+});
+
+test("formats diff songs with song ids", () => {
+  const lines = formatDiffSongsTable([
+    {
+      id: 10,
+      name: "心淡",
+      artists: [{ name: "容祖儿" }],
+      sourceIndex: 3,
+      status: "missing",
+    },
+  ]);
+
+  assert.deepEqual(lines, [
+    "序号  源序号  歌曲  歌手    ID",
+    "01    3       心淡  容祖儿  10",
   ]);
 });
 
@@ -193,6 +209,7 @@ test("applies task limit in original match order", () => {
       { id: 3, name: "C" },
     ],
     {
+      type: "create_playlist_from_filter",
       sourcePlaylistName: "宝藏",
       targetPlaylistName: "助眠0528",
       limit: 2,
@@ -216,6 +233,7 @@ test("keeps all matches when task has no limit", () => {
       { id: 2, name: "B" },
     ],
     {
+      type: "create_playlist_from_filter",
       sourcePlaylistName: "宝藏",
       targetPlaylistName: "助眠0528",
       filter: {

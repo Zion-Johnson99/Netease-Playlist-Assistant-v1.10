@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { AppConfig, AppLocale, ensureDataDir } from "./config.js";
-import { PlaylistTask, Song } from "./types.js";
+import { CreatePlaylistFromFilterTask, Song } from "./types.js";
 
 const cacheVersion = 2;
 
@@ -54,7 +54,7 @@ function getSongIdentityText(song: Song): string {
 
 export function createSemanticDecisionKey(
   locale: AppLocale,
-  task: PlaylistTask,
+  task: CreatePlaylistFromFilterTask,
   song: Song,
   metadataText: string,
 ): string {

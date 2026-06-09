@@ -8,7 +8,11 @@ import {
   savePreviewCache,
 } from "../src/preview-cache.js";
 import { AppConfig } from "../src/config.js";
-import { PlaylistTask } from "../src/types.js";
+import {
+  CreatePlaylistFromFilterTask,
+  DiffSong,
+  PlaylistTask,
+} from "../src/types.js";
 
 function createTestConfig(): AppConfig {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-cache-"));
@@ -27,7 +31,8 @@ function createTestConfig(): AppConfig {
   };
 }
 
-const task: PlaylistTask = {
+const task: CreatePlaylistFromFilterTask = {
+  type: "create_playlist_from_filter",
   sourcePlaylistName: "两首",
   targetPlaylistName: "粤语精选",
   filter: {
@@ -36,9 +41,18 @@ const task: PlaylistTask = {
   },
 };
 
+const diffSong: DiffSong = {
+  id: 10,
+  name: "心淡",
+  artists: [{ name: "容祖儿" }],
+  sourceIndex: 1,
+  status: "missing",
+};
+
 test("reads matching preview cache", () => {
   const config = createTestConfig();
   savePreviewCache(config, {
+    taskType: "create_playlist_from_filter",
     sourcePlaylistId: 1,
     sourcePlaylistName: "两首",
     targetPlaylistName: "粤语精选",
@@ -55,13 +69,17 @@ test("reads matching preview cache", () => {
 
   const cache = readMatchingPreviewCache(config, task, 1);
 
-  assert.equal(cache?.matchedSongs.length, 1);
-  assert.equal(cache?.matchedSongs[0]?.id, 10);
+  assert.equal(cache?.taskType, "create_playlist_from_filter");
+  if (cache?.taskType === "create_playlist_from_filter") {
+    assert.equal(cache.matchedSongs.length, 1);
+    assert.equal(cache.matchedSongs[0]?.id, 10);
+  }
 });
 
 test("ignores preview cache for different task", () => {
   const config = createTestConfig();
   savePreviewCache(config, {
+    taskType: "create_playlist_from_filter",
     sourcePlaylistId: 1,
     sourcePlaylistName: "两首",
     targetPlaylistName: "粤语精选",
@@ -84,6 +102,7 @@ test("ignores preview cache for different task", () => {
 test("ignores preview cache for different limit", () => {
   const config = createTestConfig();
   savePreviewCache(config, {
+    taskType: "create_playlist_from_filter",
     sourcePlaylistId: 1,
     sourcePlaylistName: "两首",
     targetPlaylistName: "粤语精选",
@@ -107,6 +126,7 @@ test("ignores preview cache for different limit", () => {
 test("stores preview cache under locale data directory", () => {
   const config = createTestConfig();
   savePreviewCache(config, {
+    taskType: "create_playlist_from_filter",
     sourcePlaylistId: 1,
     sourcePlaylistName: "两首",
     targetPlaylistName: "粤语精选",
@@ -127,6 +147,7 @@ test("stores preview cache under locale data directory", () => {
 test("ignores preview cache for different locale", () => {
   const config = createTestConfig();
   savePreviewCache(config, {
+    taskType: "create_playlist_from_filter",
     sourcePlaylistId: 1,
     sourcePlaylistName: "两首",
     targetPlaylistName: "粤语精选",
@@ -143,6 +164,60 @@ test("ignores preview cache for different locale", () => {
     task,
     1,
   );
+
+  assert.equal(cache, null);
+});
+
+test("reads matching playlist diff preview cache", () => {
+  const config = createTestConfig();
+  const diffTask: PlaylistTask = {
+    type: "playlist_diff",
+    sourcePlaylistName: "粤语精选0608",
+    targetPlaylistName: "粤语精选",
+  };
+
+  savePreviewCache(config, {
+    taskType: "playlist_diff",
+    sourcePlaylistId: 1,
+    sourcePlaylistName: "粤语精选0608",
+    targetPlaylistId: 2,
+    targetPlaylistName: "粤语精选",
+    sourceTrackCount: 3,
+    targetTrackCount: 2,
+    missingSongs: [diffSong],
+    extraSongCount: 0,
+  });
+
+  const cache = readMatchingPreviewCache(config, diffTask, 1, 2);
+
+  assert.equal(cache?.taskType, "playlist_diff");
+  if (cache?.taskType === "playlist_diff") {
+    assert.equal(cache.missingSongs.length, 1);
+    assert.equal(cache.missingSongs[0]?.id, 10);
+  }
+});
+
+test("ignores playlist diff preview cache for different target id", () => {
+  const config = createTestConfig();
+  const diffTask: PlaylistTask = {
+    type: "playlist_diff",
+    sourcePlaylistName: "粤语精选0608",
+    targetPlaylistName: "粤语精选",
+  };
+
+  savePreviewCache(config, {
+    taskType: "playlist_diff",
+    sourcePlaylistId: 1,
+    sourcePlaylistName: "粤语精选0608",
+    targetPlaylistId: 2,
+    targetPlaylistName: "粤语精选",
+    sourceTrackCount: 3,
+    targetTrackCount: 2,
+    missingSongs: [diffSong],
+    extraSongCount: 0,
+  });
+
+  const cache = readMatchingPreviewCache(config, diffTask, 1, 3);
 
   assert.equal(cache, null);
 });

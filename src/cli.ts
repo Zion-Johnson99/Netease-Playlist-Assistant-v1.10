@@ -13,6 +13,7 @@ import {
 import { parseInstruction } from "./deepseek.js";
 import { filterSongs } from "./filter.js";
 import { localeDisplayName, text } from "./locale.js";
+import { computePlaylistDiff } from "./playlist-diff.js";
 import { readMatchingPreviewCache, savePreviewCache } from "./preview-cache.js";
 import {
   addSongsToPlaylist,
@@ -26,7 +27,15 @@ import {
   listOwnPlaylists,
   loginByQrCode,
 } from "./netease.js";
-import { MatchedSong, PlaylistSummary, PlaylistTask, Song } from "./types.js";
+import {
+  CreatePlaylistFromFilterTask,
+  DiffSong,
+  MatchedSong,
+  PlaylistDiffTask,
+  PlaylistSummary,
+  PlaylistTask,
+  Song,
+} from "./types.js";
 import { createDeepseekSemanticMatcher } from "./semantic.js";
 import { displayWidth, formatTable } from "./table.js";
 
@@ -197,6 +206,40 @@ export function formatMatchedSongsTable(
   );
 }
 
+export function formatDiffSongsTable(
+  songs: DiffSong[],
+  locale: AppLocale = "cn",
+): string[] {
+  const indexWidth = String(songs.length).length;
+  return formatTable(
+    songs.map((song, index) => ({
+      index: String(index + 1).padStart(Math.max(2, indexWidth), "0"),
+      sourceIndex: String(song.sourceIndex),
+      id: String(song.id),
+      name: song.name,
+      artists: getArtistsDisplay(song, locale),
+    })),
+    [
+      { header: text(locale, "序号", "No."), value: (row) => row.index },
+      {
+        header: text(locale, "源序号", "Source No."),
+        value: (row) => row.sourceIndex,
+      },
+      {
+        header: text(locale, "歌曲", "Track"),
+        value: (row) => row.name,
+        maxWidth: locale === "cn" ? 34 : undefined,
+      },
+      {
+        header: text(locale, "歌手", "Artists"),
+        value: (row) => row.artists,
+        maxWidth: locale === "cn" ? 28 : undefined,
+      },
+      { header: "ID", value: (row) => row.id },
+    ],
+  );
+}
+
 export function formatPlaylistTable(
   playlists: PlaylistSummary[],
   locale: AppLocale = "cn",
@@ -224,7 +267,10 @@ export function formatPlaylistTable(
   );
 }
 
-export function applyTaskLimit<T>(items: T[], task: PlaylistTask): T[] {
+export function applyTaskLimit<T>(
+  items: T[],
+  task: CreatePlaylistFromFilterTask,
+): T[] {
   return task.limit === undefined ? items : items.slice(0, task.limit);
 }
 
@@ -407,11 +453,54 @@ async function executeStructuredTask(
   playlists: Awaited<ReturnType<typeof listOwnPlaylists>>,
 ): Promise<void> {
   const config = loadConfig();
-  const source = findPlaylistByName(
+  const source = findPlaylistForTask(
     playlists,
     task.sourcePlaylistName,
+    "source",
     config.locale,
   );
+
+  if (task.type === "playlist_diff") {
+    await executePlaylistDiffTask(task, cookie, mode, playlists, source);
+    return;
+  }
+
+  await executeFilterTask(task, cookie, mode, playlists, source);
+}
+
+function findPlaylistForTask(
+  playlists: PlaylistSummary[],
+  name: string,
+  role: "source" | "target",
+  locale: AppLocale,
+): PlaylistSummary {
+  try {
+    return findPlaylistByName(playlists, name, locale);
+  } catch (error) {
+    const roleLabel = text(
+      locale,
+      role === "source" ? "源歌单" : "目标歌单",
+      role === "source" ? "source playlist" : "target playlist",
+    );
+    throw new Error(
+      text(
+        locale,
+        `未找到${roleLabel}或${roleLabel}不唯一：${name}。${getErrorMessage(error)}`,
+        `Could not resolve ${roleLabel}: ${name}. ${getErrorMessage(error)}`,
+      ),
+      { cause: error },
+    );
+  }
+}
+
+async function executeFilterTask(
+  task: CreatePlaylistFromFilterTask,
+  cookie: string,
+  mode: Mode,
+  playlists: PlaylistSummary[],
+  source: PlaylistSummary,
+): Promise<void> {
+  const config = loadConfig();
   const existingTarget = playlists.find(
     (playlist) => playlist.name === task.targetPlaylistName,
   );
@@ -427,7 +516,10 @@ async function executeStructuredTask(
 
   if (mode === "execute") {
     const previewCache = readMatchingPreviewCache(config, task, source.id);
-    if (previewCache && previewCache.matchedSongs.length > 0) {
+    if (
+      previewCache?.taskType === "create_playlist_from_filter" &&
+      previewCache.matchedSongs.length > 0
+    ) {
       console.log(
         text(
           config.locale,
@@ -570,6 +662,7 @@ async function executeStructuredTask(
 
   if (mode === "preview") {
     savePreviewCache(config, {
+      taskType: "create_playlist_from_filter",
       sourcePlaylistId: source.id,
       sourcePlaylistName: task.sourcePlaylistName,
       targetPlaylistName: task.targetPlaylistName,
@@ -608,6 +701,194 @@ async function executeStructuredTask(
   );
 }
 
+async function executePlaylistDiffTask(
+  task: PlaylistDiffTask,
+  cookie: string,
+  mode: Mode,
+  playlists: PlaylistSummary[],
+  source: PlaylistSummary,
+): Promise<void> {
+  const config = loadConfig();
+  const target = findPlaylistForTask(
+    playlists,
+    task.targetPlaylistName,
+    "target",
+    config.locale,
+  );
+
+  if (mode === "execute") {
+    const previewCache = readMatchingPreviewCache(
+      config,
+      task,
+      source.id,
+      target.id,
+    );
+    if (previewCache?.taskType === "playlist_diff") {
+      console.log(
+        text(
+          config.locale,
+          `使用上次预览结果：缺失 ${previewCache.missingSongs.length} 首，预览时间：${previewCache.createdAt}`,
+          `Using last preview result: ${previewCache.missingSongs.length} missing tracks, preview time: ${previewCache.createdAt}`,
+        ),
+      );
+      await addMissingSongsFromDiffCache(
+        previewCache.missingSongs,
+        target,
+        cookie,
+      );
+      return;
+    }
+  }
+
+  const { sourceSongs, targetSongs, missingSongs, extraSongCount } =
+    await previewPlaylistDiff(task, cookie, source, target);
+
+  if (mode === "preview") {
+    savePreviewCache(config, {
+      taskType: "playlist_diff",
+      sourcePlaylistId: source.id,
+      sourcePlaylistName: source.name,
+      targetPlaylistId: target.id,
+      targetPlaylistName: target.name,
+      sourceTrackCount: sourceSongs.length,
+      targetTrackCount: targetSongs.length,
+      missingSongs,
+      extraSongCount,
+    });
+    console.log(
+      text(
+        config.locale,
+        "预览完成，未添加歌曲",
+        "Preview complete. No tracks were added.",
+      ),
+    );
+    return;
+  }
+
+  await addMissingSongsFromDiffCache(missingSongs, target, cookie);
+}
+
+async function previewPlaylistDiff(
+  task: PlaylistDiffTask,
+  cookie: string,
+  source: PlaylistSummary,
+  target: PlaylistSummary,
+): Promise<{
+  sourceSongs: Song[];
+  targetSongs: Song[];
+  missingSongs: DiffSong[];
+  extraSongCount: number;
+}> {
+  const config = loadConfig();
+  console.log(
+    text(
+      config.locale,
+      `源歌单：${source.name}，歌曲数：${source.trackCount}`,
+      `Source playlist: ${source.name}, tracks: ${source.trackCount}`,
+    ),
+  );
+  console.log(
+    text(
+      config.locale,
+      `目标歌单：${target.name}，歌曲数：${target.trackCount}`,
+      `Target playlist: ${target.name}, tracks: ${target.trackCount}`,
+    ),
+  );
+
+  const [sourceSongs, targetSongs] = await Promise.all([
+    getPlaylistSongs(source.id, cookie),
+    getPlaylistSongs(target.id, cookie),
+  ]);
+  const diff = computePlaylistDiff(sourceSongs, targetSongs);
+
+  console.log(
+    text(
+      config.locale,
+      `源歌单实际读取：${sourceSongs.length} 首`,
+      `Source playlist read: ${sourceSongs.length} tracks`,
+    ),
+  );
+  console.log(
+    text(
+      config.locale,
+      `目标歌单实际读取：${targetSongs.length} 首`,
+      `Target playlist read: ${targetSongs.length} tracks`,
+    ),
+  );
+  console.log(
+    text(
+      config.locale,
+      `缺失歌曲：${diff.missingSongs.length} 首`,
+      `Missing tracks: ${diff.missingSongs.length}`,
+    ),
+  );
+  if (diff.extraSongs.length > 0) {
+    console.log(
+      text(
+        config.locale,
+        `目标歌单中有 ${diff.extraSongs.length} 首额外歌曲，已保留`,
+        `Target playlist has ${diff.extraSongs.length} extra tracks. They were kept.`,
+      ),
+    );
+  }
+
+  if (diff.missingSongs.length === 0) {
+    console.log(
+      text(
+        config.locale,
+        "目标歌单已完整，无需添加",
+        "Target playlist is already complete. No tracks need to be added.",
+      ),
+    );
+  } else {
+    console.log("");
+    for (const line of formatDiffSongsTable(diff.missingSongs, config.locale)) {
+      console.log(line);
+    }
+  }
+
+  return {
+    sourceSongs,
+    targetSongs,
+    missingSongs: diff.missingSongs,
+    extraSongCount: diff.extraSongs.length,
+  };
+}
+
+async function addMissingSongsFromDiffCache(
+  missingSongs: DiffSong[],
+  target: PlaylistSummary,
+  cookie: string,
+): Promise<void> {
+  const config = loadConfig();
+
+  if (missingSongs.length === 0) {
+    console.log(
+      text(
+        config.locale,
+        "目标歌单已完整，无需添加",
+        "Target playlist is already complete. No tracks need to be added.",
+      ),
+    );
+    return;
+  }
+
+  await addSongsToPlaylist(
+    target.id,
+    missingSongs.map((song) => song.id),
+    cookie,
+    config.locale,
+  );
+
+  console.log(
+    text(
+      config.locale,
+      `已添加 ${missingSongs.length} 首歌曲到“${target.name}”。目标歌单当前共 ${target.trackCount + missingSongs.length} 首。`,
+      `Added ${missingSongs.length} tracks to "${target.name}". Target playlist now has ${target.trackCount + missingSongs.length} tracks.`,
+    ),
+  );
+}
+
 function getInstruction(args: string[], locale: AppLocale): string {
   const instruction = args.join(" ").trim();
   if (!instruction) {
@@ -624,27 +905,27 @@ export function createInteractiveIntro(
   model = "deepseek-v4-flash",
 ): string {
   const logo = `${introAnsi.logoBg}${introAnsi.brightWhite} ◎ ${introAnsi.reset}`;
-  const title = `${logo} ${introAnsi.brightWhite}Netease Playlist Assistant${introAnsi.reset}`;
+  const title = `${logo} ${introAnsi.brightWhite}Netease Playlist Assistant v1.10${introAnsi.reset}`;
   const modeText =
     locale === "en"
       ? mode === "preview"
         ? "preview"
-        : "create playlist"
+        : "run"
       : mode === "preview"
         ? "预览"
-        : "建立歌单";
+        : "执行";
   const hint =
     locale === "en"
       ? mode === "preview"
-        ? "source playlist, filter, target name"
-        : "same request as preview, reuse recent result"
+        ? "filter into a new playlist, or compare two existing playlists"
+        : "reuse preview, then create or complete the target playlist"
       : mode === "preview"
-        ? "源歌单、筛选条件、目标歌单名"
-        : "预览同款文本，优先复用结果";
+        ? "筛选建单，或对比两个已有歌单"
+        : "复用预览，再创建或补全目标歌单";
   const example =
     locale === "en"
-      ? "Find all Cantonese songs in playlist xx, list them, then add them to a new playlist named Cantonese Picks"
-      : "帮我在xx这个歌单中找到所有粤语歌曲并列出来，然后添加进一个新建歌单中，叫做粤语精选";
+      ? 'List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"'
+      : "把“纯音乐”中“中文歌”没有的歌列出来，并添加到“中文歌”";
   const lines =
     locale === "en"
       ? [

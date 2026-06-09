@@ -1,6 +1,6 @@
 import { AppLocale } from "./config.js";
 import { text } from "./locale.js";
-import { MatchedSong, PlaylistTask, Song } from "./types.js";
+import { CreatePlaylistFromFilterTask, MatchedSong, Song } from "./types.js";
 
 const artistAliases = new Map<string, string[]>([
   ["贾斯汀比伯", ["贾斯汀比伯", "justin bieber", "bieber", "justin"]],
@@ -66,7 +66,7 @@ export type SemanticProgressDetails = {
 
 export type SemanticMatcherInput = {
   songs: Song[];
-  task: PlaylistTask;
+  task: CreatePlaylistFromFilterTask;
   getLyric: (songId: number) => Promise<string | undefined>;
   onProgress: (
     processed: number,
@@ -86,7 +86,7 @@ export type FilterSongsOptions = {
 
 export async function filterSongs(
   songs: Song[],
-  task: PlaylistTask,
+  task: CreatePlaylistFromFilterTask,
   getLyric: (songId: number) => Promise<string | undefined>,
   options: FilterSongsOptions = {},
 ): Promise<MatchedSong[]> {

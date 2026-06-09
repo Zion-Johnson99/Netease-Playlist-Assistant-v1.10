@@ -6,15 +6,7 @@ import { PlaylistTask, TaskSchema } from "./types.js";
 
 const parseInstructionTimeoutMs = 30_000;
 
-const ModelResponseSchema = z.object({
-  sourcePlaylistName: z.string(),
-  targetPlaylistName: z.string(),
-  limit: z.number().int().positive().optional(),
-  filter: z.object({
-    type: z.enum(["language", "artist", "semantic"]),
-    value: z.string(),
-  }),
-});
+const ModelResponseSchema = TaskSchema;
 
 export function extractJsonObject(text: string): unknown {
   const trimmed = text.trim();
@@ -132,8 +124,8 @@ export async function parseInstruction(
             role: "system",
             content: text(
               locale,
-              "你把中文音乐歌单操作指令解析为 JSON。只输出 JSON，不输出解释。字段：sourcePlaylistName、targetPlaylistName、filter、limit。filter.type 可选 artist、language、semantic。明确按歌手筛选时用 artist，明确按语种筛选时用 language，曲风、情绪、年代、场景、复杂描述用 semantic。filter.value 保留用户原始筛选值。用户明确要求歌曲数量时，把正整数写入 limit；未要求数量时省略 limit。sourcePlaylistName 只能填写用户已有歌单候选中的精确名称；用户说“我两首这个歌单”时，候选里存在“两首”，就输出“两首”。targetPlaylistName 按用户要新建的名称输出。",
-              "Parse English music playlist operation instructions into JSON. Output JSON only, with no explanation. Fields: sourcePlaylistName, targetPlaylistName, filter, limit. filter.type must be one of artist, language, semantic. Use artist for explicit artist filters, language for explicit singing-language filters, and semantic for genre, mood, era, scene, or complex descriptions. Keep the original filter value in filter.value. When the user explicitly requests a track count, write the positive integer to limit; omit limit when no count is requested. sourcePlaylistName must be the exact name from the user's existing playlist candidates. targetPlaylistName must be the new playlist name requested by the user.",
+              "你把中文音乐歌单操作指令解析为 JSON。只输出 JSON，不输出解释。字段必须包含 type、sourcePlaylistName、targetPlaylistName。type 可选 create_playlist_from_filter 或 playlist_diff。用户表达“某歌单中有、另一个歌单中没有、缺失、补全、添加到已有歌单、列出差异”时输出 playlist_diff，只输出 type、sourcePlaylistName、targetPlaylistName。用户表达“筛出、找到某类歌曲、创建、新建、整理到新歌单”时输出 create_playlist_from_filter，并输出 filter，必要时输出 limit。filter.type 可选 artist、language、semantic。明确按歌手筛选时用 artist，明确按语种筛选时用 language，曲风、情绪、年代、场景、复杂描述用 semantic。filter.value 保留用户原始筛选值。用户明确要求歌曲数量时，把正整数写入 limit；未要求数量时省略 limit。sourcePlaylistName 和 targetPlaylistName 优先填写用户已有歌单候选中的精确名称；用户说“我两首这个歌单”时，候选里存在“两首”，就输出“两首”。create_playlist_from_filter 的 targetPlaylistName 按用户要新建的名称输出；playlist_diff 的 targetPlaylistName 按用户要补全的已有歌单名称输出。",
+              "Parse English music playlist operation instructions into JSON. Output JSON only, with no explanation. Required fields: type, sourcePlaylistName, targetPlaylistName. type must be create_playlist_from_filter or playlist_diff. Use playlist_diff when the user asks for songs that exist in one playlist but not another, missing tracks, completion, adding missing tracks to an existing playlist, or listing differences. For playlist_diff, output only type, sourcePlaylistName, and targetPlaylistName. Use create_playlist_from_filter when the user asks to filter tracks, find a category of tracks, create a new playlist, or organize tracks into a new playlist. Then output filter and optional limit. filter.type must be artist, language, or semantic. Use artist for explicit artist filters, language for explicit singing-language filters, and semantic for genre, mood, era, scene, or complex descriptions. Keep the original filter value in filter.value. When the user explicitly requests a track count, write the positive integer to limit; omit limit when no count is requested. sourcePlaylistName and targetPlaylistName should prefer exact names from existing playlist candidates. For create_playlist_from_filter, targetPlaylistName is the new playlist name requested by the user. For playlist_diff, targetPlaylistName is the existing playlist to complete.",
             ),
           },
           {

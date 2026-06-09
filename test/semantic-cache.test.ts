@@ -8,7 +8,7 @@ import {
   createSemanticDecisionKey,
   SemanticCache,
 } from "../src/semantic-cache.js";
-import { PlaylistTask, Song } from "../src/types.js";
+import { CreatePlaylistFromFilterTask, Song } from "../src/types.js";
 
 function createTestConfig(): AppConfig {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "netease-semantic-"));
@@ -27,7 +27,8 @@ function createTestConfig(): AppConfig {
   };
 }
 
-const task: PlaylistTask = {
+const task: CreatePlaylistFromFilterTask = {
+  type: "create_playlist_from_filter",
   sourcePlaylistName: "A",
   targetPlaylistName: "粤语精选",
   filter: {

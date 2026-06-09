@@ -1,33 +1,58 @@
 import fs from "node:fs";
 import path from "node:path";
 import { AppConfig, AppLocale, ensureDataDir } from "./config.js";
-import { MatchedSong, PlaylistTask } from "./types.js";
+import {
+  CreatePlaylistFromFilterTask,
+  DiffSong,
+  MatchedSong,
+  PlaylistTask,
+} from "./types.js";
 
-export type PreviewCache = {
+type BasePreviewCache = {
   locale: AppLocale;
+  taskType: PlaylistTask["type"];
   sourcePlaylistId: number;
   sourcePlaylistName: string;
   targetPlaylistName: string;
-  limit?: number;
-  filter: PlaylistTask["filter"];
-  matchedSongs: MatchedSong[];
   createdAt: string;
 };
+
+export type FilterPreviewCache = BasePreviewCache & {
+  taskType: "create_playlist_from_filter";
+  limit?: number;
+  filter: CreatePlaylistFromFilterTask["filter"];
+  matchedSongs: MatchedSong[];
+};
+
+export type DiffPreviewCache = BasePreviewCache & {
+  taskType: "playlist_diff";
+  targetPlaylistId: number;
+  sourceTrackCount: number;
+  targetTrackCount: number;
+  missingSongs: DiffSong[];
+  extraSongCount: number;
+};
+
+export type PreviewCache = FilterPreviewCache | DiffPreviewCache;
+
+type NewPreviewCache =
+  | Omit<FilterPreviewCache, "createdAt" | "locale">
+  | Omit<DiffPreviewCache, "createdAt" | "locale">;
 
 function getPreviewCachePath(config: AppConfig): string {
   return path.join(config.localeDataDir, "last-preview.json");
 }
 
 function isSameFilter(
-  left: PlaylistTask["filter"],
-  right: PlaylistTask["filter"],
+  left: CreatePlaylistFromFilterTask["filter"],
+  right: CreatePlaylistFromFilterTask["filter"],
 ): boolean {
   return left.type === right.type && left.value === right.value;
 }
 
 export function savePreviewCache(
   config: AppConfig,
-  cache: Omit<PreviewCache, "createdAt" | "locale">,
+  cache: NewPreviewCache,
 ): void {
   ensureDataDir(config);
   fs.writeFileSync(
@@ -49,6 +74,7 @@ export function readMatchingPreviewCache(
   config: AppConfig,
   task: PlaylistTask,
   sourcePlaylistId: number,
+  targetPlaylistId?: number,
 ): PreviewCache | null {
   const cachePath = getPreviewCachePath(config);
   if (!fs.existsSync(cachePath)) {
@@ -57,12 +83,30 @@ export function readMatchingPreviewCache(
 
   const cache = JSON.parse(fs.readFileSync(cachePath, "utf8")) as PreviewCache;
   if (
+    cache.taskType !== task.type ||
     cache.sourcePlaylistId !== sourcePlaylistId ||
     cache.locale !== config.locale ||
     cache.sourcePlaylistName !== task.sourcePlaylistName ||
-    cache.targetPlaylistName !== task.targetPlaylistName ||
-    cache.limit !== task.limit ||
-    !isSameFilter(cache.filter, task.filter)
+    cache.targetPlaylistName !== task.targetPlaylistName
+  ) {
+    return null;
+  }
+
+  if (task.type === "create_playlist_from_filter") {
+    if (
+      cache.taskType !== "create_playlist_from_filter" ||
+      cache.limit !== task.limit ||
+      !isSameFilter(cache.filter, task.filter)
+    ) {
+      return null;
+    }
+
+    return cache;
+  }
+
+  if (
+    cache.taskType !== "playlist_diff" ||
+    cache.targetPlaylistId !== targetPlaylistId
   ) {
     return null;
   }

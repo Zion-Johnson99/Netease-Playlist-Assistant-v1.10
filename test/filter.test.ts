@@ -33,6 +33,7 @@ test("matches artist names without separators", () => {
 
 test("filters songs by artist task", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "JB",
     filter: {
@@ -58,6 +59,7 @@ test("ignores missing artist names during artist filtering", async () => {
     artists: [{ name: null }],
   } as unknown as Song;
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "JB",
     filter: {
@@ -79,6 +81,7 @@ test("ignores missing artist names during artist filtering", async () => {
 
 test("routes language tasks through semantic matcher", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "粤语精选",
     filter: {
@@ -110,6 +113,7 @@ test("routes language tasks through semantic matcher", async () => {
 
 test("does not match language tasks by singer hints alone", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "粤语精选",
     filter: {
@@ -140,6 +144,7 @@ test("does not match language tasks by singer hints alone", async () => {
 
 test("reports progress while filtering language tasks", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "粤语精选",
     filter: {
@@ -176,6 +181,7 @@ test("reports progress while filtering language tasks", async () => {
 
 test("passes semantic progress details through filter progress", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "粤语精选",
     filter: {
@@ -223,6 +229,7 @@ test("passes semantic progress details through filter progress", async () => {
 
 test("passes metadata progress details through filter progress", async () => {
   const task: PlaylistTask = {
+    type: "create_playlist_from_filter",
     sourcePlaylistName: "A",
     targetPlaylistName: "R&B精选",
     filter: {

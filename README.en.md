@@ -1,4 +1,4 @@
-# Netease Playlist Assistant v1.0
+# Netease Playlist Assistant v1.10
 
 [中文](README.md) | English
 
@@ -10,7 +10,7 @@
 
 A local CLI tool that organizes NetEase Cloud Music playlists from plain-language requests.
 
-Large playlists get messy quickly. Cantonese tracks, Japanese songs, English slow songs, workout music, and old favorites all end up in the same place. When you want to pull out one group, manual cleanup means scrolling, clicking, and still missing tracks. This tool handles that workflow: describe the source playlist, the filter, and the new playlist name; preview the matches first; then create the playlist after you confirm the result.
+Large playlists get messy quickly. Cantonese tracks, Japanese songs, English slow songs, workout music, and old favorites all end up in the same place. When you want to pull out one group, manual cleanup means scrolling, clicking, and still missing tracks. This tool handles that workflow: describe the source playlist, the filter, and the new playlist name; preview the matches first; then create the playlist after you confirm the result. v1.10 adds completion between two existing playlists, so missing tracks from a source playlist can be added to an existing target playlist.
 
 It fits requests like these:
 
@@ -18,6 +18,7 @@ It fits requests like these:
 - "Find Justin Bieber songs in my commute playlist"
 - "Collect late-night English slow songs"
 - "Pick the first 20 Cantonese songs from a large playlist"
+- "Add instrumental tracks missing from my Chinese Songs playlist"
 
 The project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.com/Binaryify/NeteaseCloudMusicApi). It uses NetEase Cloud Music login, playlist, track, lyric, and music metadata APIs, then wraps them into a personal playlist cleanup workflow.
 
@@ -28,6 +29,7 @@ The project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.c
 - Language filtering: handles requests such as "Cantonese songs", "Japanese songs", and "English slow songs" by combining track metadata, lyric snippets, and model judgment.
 - Scene and style filtering: supports open-ended descriptions such as "English songs for commuting", "late-night R&B", "running tracks", and "2000s Mandarin pop".
 - Count limits: supports "first 20 tracks" and "pick 10 songs", preserving the original playlist order for the first N matches.
+- Existing playlist completion: compares two existing playlists by NetEase track ID, lists tracks missing from the target playlist, and adds them to that target playlist.
 - QR code login: signs in through the NetEase Cloud Music mobile app and stores the login state locally.
 - Local cache: reuses semantic decisions and the latest preview result to reduce repeated requests.
 - API scheduling: rate-limits, queues, and retries selected NetEase API calls to reduce failures during heavy operations.
@@ -45,8 +47,8 @@ The project is built on top of [Binaryify/NeteaseCloudMusicApi](https://github.c
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/Zion-Johnson99/Netease-Playlist-Assistant-v1.0.git
-cd Netease-Playlist-Assistant-v1.0
+git clone https://github.com/Zion-Johnson99/Netease-Playlist-Assistant-v1.10.git
+cd Netease-Playlist-Assistant-v1.10
 npm install
 ```
 
@@ -163,6 +165,10 @@ Enter a full request when prompted, for example:
 Find all Coldplay songs in my liked songs and create a new playlist named Coldplay Picks
 ```
 
+It also supports completion between two existing playlists:
+
+<small>preview/run: List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"</small>
+
 Create the playlist after preview:
 
 ```bash
@@ -197,6 +203,10 @@ Filter by scene:
 Find late-night English slow songs in my English playlist and create a playlist named Late Night English
 ```
 
+Complete an existing playlist:
+
+<small>List tracks in "Instrumental" that are missing from "Chinese Songs", then add them to "Chinese Songs"</small>
+
 Common filtering modes:
 
 <table>
@@ -230,6 +240,8 @@ Created playlist results:
 `language` uses DeepSeek with track names, artists, albums, and lyric snippets to judge the actual singing language.
 
 `semantic` uses DeepSeek for genres, moods, eras, scenes, and other open-ended criteria. By default, semantic filtering sends tracks in batches of 30, truncates lyric snippets to 900 characters, and accepts matches with confidence of at least 0.75.
+
+`playlist_diff` compares two existing playlists by NetEase track ID. `preview` lists tracks present in the source playlist and missing from the target playlist. `run` adds those missing tracks to the target playlist.
 
 ## Local Data
 
