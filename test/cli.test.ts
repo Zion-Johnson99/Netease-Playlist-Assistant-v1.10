@@ -19,6 +19,12 @@ function stripAnsi(value: string): string {
   return value.replace(ansiPattern, "");
 }
 
+function displayColumnBefore(value: string, needle: string): number {
+  const index = value.indexOf(needle);
+  assert.notEqual(index, -1);
+  return displayWidth(value.slice(0, index));
+}
+
 function assertClosedFrame(intro: string): void {
   const lines = intro.split("\n").map(stripAnsi);
 
@@ -64,9 +70,9 @@ test("creates English preview interactive intro", () => {
 
   assert.match(
     intro,
-    /\u001b\[90mmode:\u001b\[0m \u001b\[94mpreview\u001b\[0m/,
+    /\u001b\[90mmode:\u001b\[0m\s+\u001b\[94mpreview\u001b\[0m/,
   );
-  assert.match(intro, /\u001b\[90mmodel:\u001b\[0m deepseek-v4-flash/);
+  assert.match(intro, /\u001b\[90mmodel:\u001b\[0m\s+deepseek-v4-flash/);
   assert.match(intro, /new: source playlist, filter, new target/);
   assert.match(intro, /playlist/);
   assert.match(intro, /complete: source playlist, existing target playlist/);
@@ -76,6 +82,64 @@ test("creates English preview interactive intro", () => {
   assert.match(intro, /"Cantonese Picks"/);
   assert.match(intro, /"Cantonese Memory"/);
   assertClosedFrame(intro);
+});
+
+test("aligns Chinese intro continuation rows", () => {
+  const lines = createInteractiveIntro("preview", "cn")
+    .split("\n")
+    .map(stripAnsi);
+
+  const requestLine = lines.find((line) => line.includes("新建：源歌单"));
+  const requestContinuationLine = lines.find((line) =>
+    line.includes("补全：源歌单"),
+  );
+  const exampleLine = lines.find((line) => line.includes("新建：帮我"));
+  const exampleContinuationLine = lines.find((line) =>
+    line.includes("补全：把"),
+  );
+
+  assert.ok(requestLine);
+  assert.ok(requestContinuationLine);
+  assert.ok(exampleLine);
+  assert.ok(exampleContinuationLine);
+  assert.equal(
+    displayColumnBefore(requestContinuationLine, "补全："),
+    displayColumnBefore(requestLine, "新建："),
+  );
+  assert.equal(
+    displayColumnBefore(exampleContinuationLine, "补全："),
+    displayColumnBefore(exampleLine, "新建："),
+  );
+});
+
+test("aligns English intro continuation rows", () => {
+  const lines = createInteractiveIntro("preview", "en")
+    .split("\n")
+    .map(stripAnsi);
+
+  const requestLine = lines.find((line) => line.includes("new: source"));
+  const requestContinuationLine = lines.find((line) =>
+    line.includes("complete: source"),
+  );
+  const exampleLine = lines.find((line) =>
+    line.includes("new: Find all Cantonese"),
+  );
+  const exampleContinuationLine = lines.find((line) =>
+    line.includes('complete: List tracks in "Cantonese Picks"'),
+  );
+
+  assert.ok(requestLine);
+  assert.ok(requestContinuationLine);
+  assert.ok(exampleLine);
+  assert.ok(exampleContinuationLine);
+  assert.equal(
+    displayColumnBefore(requestContinuationLine, "complete:"),
+    displayColumnBefore(requestLine, "new:"),
+  );
+  assert.equal(
+    displayColumnBefore(exampleContinuationLine, "complete:"),
+    displayColumnBefore(exampleLine, "new:"),
+  );
 });
 
 test("rejects command arguments in interactive mode", () => {

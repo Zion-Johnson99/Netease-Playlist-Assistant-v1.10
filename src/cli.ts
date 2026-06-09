@@ -60,7 +60,7 @@ const introAnsi = {
 } as const;
 
 const ansiPattern = /\u001b\[[0-9;]*m/g;
-const introContentWidth = 56;
+const introContentWidth = 66;
 
 function stripAnsi(value: string): string {
   return value.replace(ansiPattern, "");
@@ -77,6 +77,10 @@ function colorLabel(value: string): string {
 
 function colorBorder(value: string): string {
   return `${introAnsi.borderRed}${value}${introAnsi.reset}`;
+}
+
+function padEndByDisplayWidth(value: string, width: number): string {
+  return value + " ".repeat(Math.max(0, width - displayWidth(value)));
 }
 
 function wrapDisplayText(value: string, maxWidth: number): string[] {
@@ -123,9 +127,18 @@ function wrapDisplayText(value: string, maxWidth: number): string[] {
   return lines;
 }
 
-function formatIntroField(label: string, value: string): string[] {
-  const labelWidth = displayWidth(label);
-  const prefix = `${colorLabel(label)} `;
+function formatIntroField(
+  label: string,
+  value: string,
+  labelColumnWidth = displayWidth(label),
+): string[] {
+  const labelWidth = Math.max(labelColumnWidth, displayWidth(label));
+  const labelPadding = " ".repeat(
+    Math.max(0, labelWidth - displayWidth(label)),
+  );
+  const prefix = label
+    ? `${colorLabel(label)}${labelPadding} `
+    : `${" ".repeat(labelWidth)} `;
   const continuationPrefix = " ".repeat(labelWidth + 1);
   const wrapped = wrapDisplayText(value, introContentWidth - labelWidth - 1);
 
@@ -938,27 +951,41 @@ export function createInteractiveIntro(
     locale === "en"
       ? 'complete: List tracks in "Cantonese Picks" that are missing from "Cantonese Memory", then add them to "Cantonese Memory"'
       : "补全：把“粤语精选”中“粤语记忆”没有的歌列出来，并添加到“粤语记忆”";
+  const labelColumnWidth =
+    locale === "en"
+      ? Math.max(
+          ...["mode:", "model:", "request:", "example:"].map(displayWidth),
+        )
+      : Math.max(...["模式：", "模型：", "需求：", "示例："].map(displayWidth));
   const lines =
     locale === "en"
       ? [
           title,
-          ...formatIntroField("mode:", colorModeValue(mode, modeText)),
-          ...formatIntroField("model:", model),
+          ...formatIntroField(
+            "mode:",
+            colorModeValue(mode, modeText),
+            labelColumnWidth,
+          ),
+          ...formatIntroField("model:", model, labelColumnWidth),
           "",
-          ...formatIntroField("request:", hint),
-          ...formatIntroField("", diffHint),
-          ...formatIntroField("example:", example),
-          ...formatIntroField("", diffExample),
+          ...formatIntroField("request:", hint, labelColumnWidth),
+          ...formatIntroField("", diffHint, labelColumnWidth),
+          ...formatIntroField("example:", example, labelColumnWidth),
+          ...formatIntroField("", diffExample, labelColumnWidth),
         ]
       : [
           title,
-          ...formatIntroField("模式：", colorModeValue(mode, modeText)),
-          ...formatIntroField("模型：", model),
+          ...formatIntroField(
+            "模式：",
+            colorModeValue(mode, modeText),
+            labelColumnWidth,
+          ),
+          ...formatIntroField("模型：", model, labelColumnWidth),
           "",
-          ...formatIntroField("需求：", hint),
-          ...formatIntroField("", diffHint),
-          ...formatIntroField("示例：", example),
-          ...formatIntroField("", diffExample),
+          ...formatIntroField("需求：", hint, labelColumnWidth),
+          ...formatIntroField("", diffHint, labelColumnWidth),
+          ...formatIntroField("示例：", example, labelColumnWidth),
+          ...formatIntroField("", diffExample, labelColumnWidth),
         ];
 
   return createSoftNeteaseFrame(

@@ -52,7 +52,7 @@ test("rejects unsupported deepseek model names", () => {
 
   assert.throws(
     () => setDeepseekModel("deepseek-chat", envPath),
-    /模型只支持 deepseek-v4-pro 或 deepseek-v4-flash/,
+    /模型只支持 deepseek-v4-pro 或 deepseek-v4-flash|Model only supports deepseek-v4-pro or deepseek-v4-flash/,
   );
   assert.equal(
     fs.readFileSync(envPath, "utf8"),
