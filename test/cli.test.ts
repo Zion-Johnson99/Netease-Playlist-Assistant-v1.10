@@ -112,6 +112,30 @@ test("aligns Chinese intro continuation rows", () => {
   );
 });
 
+test("wraps Chinese intro examples with a shorter example-only width", () => {
+  const lines = createInteractiveIntro("preview", "cn")
+    .split("\n")
+    .map(stripAnsi);
+
+  const createExampleLine = lines.find((line) => line.includes("新建：帮我"));
+  const createExampleContinuationLine = lines.find((line) =>
+    line.includes("然后添加进一个新建歌单中"),
+  );
+  const requestLine = lines.find((line) =>
+    line.includes("新建：源歌单、筛选条件"),
+  );
+
+  assert.ok(createExampleLine);
+  assert.ok(createExampleContinuationLine);
+  assert.ok(requestLine);
+  assert.equal(createExampleLine.includes("然后添加"), false);
+  assert.equal(
+    displayColumnBefore(createExampleContinuationLine, "然后添加"),
+    displayColumnBefore(createExampleLine, "新建："),
+  );
+  assert.equal(requestLine.includes("目标新歌单名"), true);
+});
+
 test("aligns English intro continuation rows", () => {
   const lines = createInteractiveIntro("preview", "en")
     .split("\n")

@@ -61,6 +61,7 @@ const introAnsi = {
 
 const ansiPattern = /\u001b\[[0-9;]*m/g;
 const introContentWidth = 66;
+const introExampleContentWidth = 58;
 
 function stripAnsi(value: string): string {
   return value.replace(ansiPattern, "");
@@ -131,6 +132,7 @@ function formatIntroField(
   label: string,
   value: string,
   labelColumnWidth = displayWidth(label),
+  contentWidth = introContentWidth,
 ): string[] {
   const labelWidth = Math.max(labelColumnWidth, displayWidth(label));
   const labelPadding = " ".repeat(
@@ -140,7 +142,7 @@ function formatIntroField(
     ? `${colorLabel(label)}${labelPadding} `
     : `${" ".repeat(labelWidth)} `;
   const continuationPrefix = " ".repeat(labelWidth + 1);
-  const wrapped = wrapDisplayText(value, introContentWidth - labelWidth - 1);
+  const wrapped = wrapDisplayText(value, contentWidth - labelWidth - 1);
 
   return wrapped.map((line, index) => {
     return `${index === 0 ? prefix : continuationPrefix}${line}`;
@@ -957,6 +959,8 @@ export function createInteractiveIntro(
           ...["mode:", "model:", "request:", "example:"].map(displayWidth),
         )
       : Math.max(...["模式：", "模型：", "需求：", "示例："].map(displayWidth));
+  const exampleContentWidth =
+    locale === "en" ? introContentWidth : introExampleContentWidth;
   const lines =
     locale === "en"
       ? [
@@ -970,8 +974,18 @@ export function createInteractiveIntro(
           "",
           ...formatIntroField("request:", hint, labelColumnWidth),
           ...formatIntroField("", diffHint, labelColumnWidth),
-          ...formatIntroField("example:", example, labelColumnWidth),
-          ...formatIntroField("", diffExample, labelColumnWidth),
+          ...formatIntroField(
+            "example:",
+            example,
+            labelColumnWidth,
+            exampleContentWidth,
+          ),
+          ...formatIntroField(
+            "",
+            diffExample,
+            labelColumnWidth,
+            exampleContentWidth,
+          ),
         ]
       : [
           title,
@@ -984,8 +998,18 @@ export function createInteractiveIntro(
           "",
           ...formatIntroField("需求：", hint, labelColumnWidth),
           ...formatIntroField("", diffHint, labelColumnWidth),
-          ...formatIntroField("示例：", example, labelColumnWidth),
-          ...formatIntroField("", diffExample, labelColumnWidth),
+          ...formatIntroField(
+            "示例：",
+            example,
+            labelColumnWidth,
+            exampleContentWidth,
+          ),
+          ...formatIntroField(
+            "",
+            diffExample,
+            labelColumnWidth,
+            exampleContentWidth,
+          ),
         ];
 
   return createSoftNeteaseFrame(
