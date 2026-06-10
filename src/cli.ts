@@ -62,6 +62,7 @@ const introAnsi = {
 const ansiPattern = /\u001b\[[0-9;]*m/g;
 const introContentWidth = 66;
 const introExampleContentWidth = 58;
+const introFrameMinContentWidth = introExampleContentWidth;
 
 function stripAnsi(value: string): string {
   return value.replace(ansiPattern, "");
@@ -158,7 +159,7 @@ function createSoftNeteaseFrame(lines: string[]): string {
   const leftPadCols = 2;
 
   const contentMaxCols = Math.max(
-    introContentWidth,
+    introFrameMinContentWidth,
     ...lines.map((line) => displayWidth(stripAnsi(line))),
   );
 

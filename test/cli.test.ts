@@ -35,6 +35,10 @@ function assertClosedFrame(intro: string): void {
   }
 }
 
+function frameDisplayWidth(intro: string): number {
+  return displayWidth(stripAnsi(intro.split("\n")[0] ?? ""));
+}
+
 test("creates preview interactive intro", () => {
   const intro = createInteractiveIntro("preview", "cn", "deepseek-v4-pro");
 
@@ -134,6 +138,12 @@ test("wraps Chinese intro examples with a shorter example-only width", () => {
     displayColumnBefore(createExampleLine, "新建："),
   );
   assert.equal(requestLine.includes("目标新歌单名"), true);
+});
+
+test("keeps Chinese intro frame close to the wrapped example width", () => {
+  const intro = createInteractiveIntro("preview", "cn");
+
+  assert.equal(frameDisplayWidth(intro), 62);
 });
 
 test("aligns English intro continuation rows", () => {
